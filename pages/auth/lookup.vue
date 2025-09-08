@@ -61,12 +61,17 @@
 </template>
 
 <script setup>
-import { useAuth } from '@/composables/useAuth'
 import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
 
 definePageMeta({ layout: 'userauthlayout' })
 
-const email = ref('')
+const route = useRoute()
+const router = useRouter()
+const redirect = route.query.redirect || '/dashboard'
+
+const email = ref(route.query.email || '')
 const error = ref('')
 const loading = ref(false)
 
@@ -75,15 +80,10 @@ const { lookup } = useAuth()
 const submit = async () => {
   error.value = ''
   loading.value = true
-
   try {
     const exists = await lookup(email.value)
-
-    if (exists) {
-      await navigateTo(`/auth/login?email=${encodeURIComponent(email.value)}`)
-    } else {
-      await navigateTo(`/auth/register?email=${encodeURIComponent(email.value)}`)
-    }
+    const target = exists ? '/auth/login' : '/auth/register'
+    await router.push(`${target}?email=${encodeURIComponent(email.value)}&redirect=${encodeURIComponent(redirect)}`)
   } catch (err) {
     error.value = err?.message || 'Ein Fehler ist aufgetreten.'
   } finally {

@@ -20,16 +20,16 @@ export default defineNuxtConfig({
     { src: '~/plugins/theme.client', mode: 'client' },
   ],
   nitro: {
-    devProxy: {
-      '/api/': {
-        target: 'http://localhost:8000',
-        changeOrigin: true
-      }
+    // PROD & DEV: RouteRules-Proxy (funktioniert in beiden Umgebungen)
+    routeRules: {
+      // /api/... -> http://localhost:8000/api/...
+      '/api/**': { proxy: 'http://localhost:8000/api/**' }
     }
   },
   runtimeConfig: {
     public: {
-      apiBaseUrl: 'http://localhost:8000/api'
+      // WICHTIG: gleiche Origin nutzen → kein CORS, Cookies funktionieren
+      apiBaseUrl: '/api'
     }
   },
   compatibilityDate: '2025-09-08',

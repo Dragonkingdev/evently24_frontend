@@ -86,12 +86,16 @@
 
 
 <script setup>
-import { useAuth } from '@/composables/useAuth'
 import { ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
 
 definePageMeta({ layout: 'userauthlayout' })
 
 const route = useRoute()
+const router = useRouter()
+const redirect = route.query.redirect || '/dashboard'
+
 const email = ref(route.query.email || '')
 const firstName = ref('')
 const lastName = ref('')
@@ -102,26 +106,16 @@ const loading = ref(false)
 
 const { register } = useAuth()
 
-// Prüfen ob Passwörter übereinstimmen
 const passwordsDontMatch = computed(() => password.value !== passwordConfirm.value && passwordConfirm.value.length > 0)
-
-// Button nur aktivieren wenn alles passt
-const canSubmit = computed(() =>
-  email.value &&
-  firstName.value &&
-  lastName.value &&
-  password.value &&
-  passwordConfirm.value &&
-  !passwordsDontMatch.value
-)
+const canSubmit = computed(() => email.value && firstName.value && lastName.value && password.value && passwordConfirm.value && !passwordsDontMatch.value)
 
 const submit = async () => {
+  if (passwordsDontMatch.value) return
   error.value = ''
   loading.value = true
-
   try {
-    await register({ email: email.value, password: password.value })
-    await navigateTo('/dashboard')
+    await register({ email: email.value, password: password.value, firstName: firstName.value, lastName: lastName.value })
+    await router.push(redirect)
   } catch (err) {
     error.value = err?.message || 'Registrierung fehlgeschlagen.'
   } finally {

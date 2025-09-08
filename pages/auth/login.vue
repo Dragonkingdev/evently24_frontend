@@ -79,18 +79,19 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
-import { ref } from 'vue'
 
 definePageMeta({ layout: 'userauthlayout' })
 
 const route = useRoute()
 const router = useRouter()
 const email = route.query.email || ''
+const redirect = route.query.redirect || '/dashboard'
 
 if (!email) {
-  //router.replace('/user/lookup')
+  router.replace(`/auth/lookup?redirect=${encodeURIComponent(redirect)}`)
 }
 
 const password = ref('')
@@ -102,11 +103,9 @@ const { login } = useAuth()
 const submit = async () => {
   error.value = ''
   loading.value = true
-
   try {
-    await login({ email: email, password: password.value })
-    console.log('Login erfolgreich')
-    await router.push('/dashboard')
+    await login({ email, password: password.value })
+    await router.push(redirect)
   } catch (err) {
     error.value = err?.message || 'Login fehlgeschlagen.'
   } finally {

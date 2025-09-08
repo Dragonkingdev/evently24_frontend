@@ -1,99 +1,80 @@
+// composables/useAuth.js
 export const useAuth = () => {
-  const sessionKey = useCookie('session_key') // persistente Session
   const user = useState('user', () => null)
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBaseUrl
+  const authReady = useState('auth_ready', () => false)
+  const apiBase = useRuntimeConfig().public.apiBaseUrl
 
-  // 📧 CHECK EMAIL (Identifikation)
+  const ssrHeaders = () =>
+    process.server ? { cookie: useRequestHeaders(['cookie']).cookie || '' } : undefined
+
+  // 🔎 Lookup (existiert E-Mail?)
   const lookup = async (email) => {
     try {
       const data = await $fetch(`${apiBase}/auth/check-email`, {
         method: 'POST',
         body: { email },
+        credentials: 'include',
+        headers: ssrHeaders(),
+        cache: 'no-store'
       })
-      return data.email_taken
-    } catch (err) {
+      return !!data?.email_taken
+    } catch {
       throw new Error('Fehler bei der E-Mail-Prüfung')
     }
   }
 
-  // 🔐 LOGIN
+  // 🔐 Login – Server setzt HttpOnly-Cookie
   const login = async ({ email, password }) => {
-    try {
-      const data = await $fetch(`${apiBase}/auth/login`, {
-        method: 'POST',
-        body: { email, password },
-        credentials: 'include'
-      })
-
-      console.log('Login response:', data)
-
-      if (!data?.session_key) {
-        throw new Error('Login fehlgeschlagen')
-      }
-
-      sessionKey.value = data.session_key
-      user.value = { email }
-
-    } catch (err) {
-      throw new Error('Login fehlgeschlagen')
-    }
+    await $fetch(`${apiBase}/auth/login`, {
+      method: 'POST',
+      body: { email, password },
+      credentials: 'include',
+      headers: ssrHeaders(),
+      cache: 'no-store'
+    })
+    await fetchUser()
   }
 
-  // 🆕 REGISTER
-  const register = async ({ email, password }) => {
-    try {
-      await $fetch(`${apiBase}/auth/register`, {
-        method: 'POST',
-        body: { email, password },
-      })
-
-      // Optional: auto-login
-      await login({ email, password })
-    } catch (err) {
-      throw new Error('Registrierung fehlgeschlagen')
-    }
+  // 🆕 Register
+  const register = async ({ email, password, firstName, lastName }) => {
+    await $fetch(`${apiBase}/auth/register`, {
+      method: 'POST',
+      body: { email, password, firstName, lastName },
+      credentials: 'include',
+      headers: ssrHeaders(),
+      cache: 'no-store'
+    })
+    await fetchUser()
   }
 
-  // 🚪 LOGOUT
+  // 🚪 Logout
   const logout = async () => {
-    if (!user.value || !sessionKey.value) return
-
     try {
       await $fetch(`${apiBase}/auth/logout`, {
         method: 'POST',
-        body: {
-          email: user.value.email,
-          session_key: sessionKey.value,
-        },
+        credentials: 'include',
+        headers: ssrHeaders(),
+        cache: 'no-store'
       })
-    } catch (err) {
-      // ignorieren oder anzeigen
     } finally {
-      sessionKey.value = null
-      bearer.value = null
       user.value = null
     }
   }
 
-  // 🔎 CHECK SESSION
+  // 👤 Me
   const fetchUser = async () => {
-    if (!sessionKey.value || !user.value?.email) return
-
     try {
-      const data = await $fetch(`${apiBase}/auth/authenticated`, {
-        method: 'POST',
-        body: {
-          email: user.value.email,
-          session_key: sessionKey.value,
-        },
+      const data = await $fetch(`${apiBase}/auth/me`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: ssrHeaders(),
+        cache: 'no-store'
       })
-
-      if (!data?.authenticated) {
-        logout()
-      }
-    } catch (err) {
-      logout()
+      user.value = data?.user || null
+    } catch {
+      user.value = null
+    } finally {
+      authReady.value = true
     }
   }
 
@@ -104,7 +85,7 @@ export const useAuth = () => {
     logout,
     fetchUser,
     user,
-    sessionKey,
-    isLoggedIn: computed(() => !!user.value && !!sessionKey.value),
+    authReady,
+    isLoggedIn: computed(() => !!user.value)
   }
 }

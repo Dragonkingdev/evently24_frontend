@@ -6,5 +6,5 @@
 </template>
 
 <script setup>
-definePageMeta({ layout: 'dashboardlayout', auth: true })
+definePageMeta({ layout: 'businesslayout', auth: true })
 </script>

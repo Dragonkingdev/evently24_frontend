@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-definePageMeta({ layout: 'dashboardlayout', auth: true })
+definePageMeta({ layout: 'businesslayout', auth: true })
 
 import { computed } from 'vue'
 import { useAsyncData } from '#imports'

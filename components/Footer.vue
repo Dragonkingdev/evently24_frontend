@@ -5,6 +5,9 @@
       <!-- Logo & Social -->
       <div class="mb-4" style="flex: 1 1 200px;">
         <img src="/icons/logo-knowpass.svg" alt="COUPERET Logo" style="height: 80px; margin-bottom: 1.5rem;">
+        <button class="btn btn-link text-decoration-none" @click="toggle" :title="theme==='dark'?'Helles Theme':'Dunkles Theme'">
+          <i class="bi" :class="theme==='dark' ? 'bi-sun' : 'bi-moon'"></i>
+        </button>
         <div class="d-flex gap-3 mb-4">
           <a href="#"><i class="bi bi-linkedin fs-5 social-icon"></i></a>
           <a href="#"><i class="bi bi-facebook fs-5 social-icon"></i></a>
@@ -54,6 +57,10 @@
     </div>
   </footer>
 </template>
+
+<script setup>
+const { theme, toggle } = useTheme()
+</script>
 
 <style scoped>
 footer {

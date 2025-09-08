@@ -210,7 +210,7 @@
 </template>
 
 <script setup>
-definePageMeta({ layout: "dashboardlayout", auth: true })
+definePageMeta({ layout: "businesslayout", auth: true })
 
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useAsyncData } from '#imports'

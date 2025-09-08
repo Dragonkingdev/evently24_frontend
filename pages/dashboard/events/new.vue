@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-definePageMeta({ layout: "dashboardlayout", auth: true  })
+definePageMeta({ layout: "businesslayout", auth: true  })
 import { ref } from 'vue'
 import { useRoute, useRouter } from '#imports'
 import { useCatalog } from '~/composables/useCatalog'

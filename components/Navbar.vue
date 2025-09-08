@@ -16,15 +16,34 @@
 
       <!-- Right: Actions -->
       <div class="nav-actions">
-        <button class="btn btn-link text-decoration-none" @click="toggle" :title="theme==='dark'?'Helles Theme':'Dunkles Theme'">
-          <i class="bi" :class="theme==='dark' ? 'bi-sun' : 'bi-moon'"></i>
-        </button>
         <NuxtLink to="/explore" class="btn btn-link text-decoration-none d-none d-lg-inline-flex">
           <i class="bi bi-compass"></i><span class="ms-1">Entdecken</span>
         </NuxtLink>
-        <NuxtLink to="/auth/lookup" class="btn btn-link text-decoration-none d-none d-lg-inline-flex">
+
+        <!-- Login nur wenn NICHT eingeloggt -->
+        <NuxtLink
+          v-if="!isLoggedIn"
+          to="/auth/lookup"
+          class="btn btn-link text-decoration-none d-none d-lg-inline-flex"
+        >
           <i class="bi bi-person-circle"></i><span class="ms-1">Login</span>
         </NuxtLink>
+
+        <!-- Wenn eingeloggt: nur Profil-Icon + sichtbarer Statuspunkt -->
+        <NuxtLink
+          v-else
+          to="/account"
+          class="btn btn-link text-decoration-none d-none d-lg-inline-flex"
+          title="Profil"
+        >
+          <span class="position-relative">
+            <i class="bi bi-person-circle"></i>
+            <span class="status-dot" aria-label="eingeloggt"></span>
+          </span>
+          <!-- Optional: Email zeigen ab XL -->
+          <span class="ms-1 d-none d-xl-inline">{{ user?.email }}</span>
+        </NuxtLink>
+
         <NuxtLink to="/cart" class="btn btn-link text-decoration-none">
           <i class="bi bi-bag"></i><span class="d-none d-lg-inline ms-1">Warenkorb</span>
         </NuxtLink>
@@ -36,15 +55,44 @@
         <NuxtLink to="/explore" class="btn btn-link text-decoration-none d-lg-none">
           <i class="bi bi-compass"></i>
         </NuxtLink>
+
+        <!-- Mobile: Profil-Icon statt Login -->
+        <NuxtLink
+          v-if="isLoggedIn"
+          to="/account"
+          class="btn btn-link text-decoration-none d-lg-none"
+          title="Profil"
+        >
+          <span class="position-relative">
+            <i class="bi bi-person-circle"></i>
+            <span class="status-dot"></span>
+          </span>
+        </NuxtLink>
+        <NuxtLink
+          v-else
+          to="/auth/lookup"
+          class="btn btn-link text-decoration-none d-lg-none"
+          title="Login"
+        >
+          <i class="bi bi-person-circle"></i>
+        </NuxtLink>
       </div>
     </div>
 
-    <!-- Mobile full-width search under navbar -->
+    <!-- Mobile full-width search unter navbar -->
     <div class="search-mobile border-top">
       <div class="container-fluid py-2">
-        <div class="position-relative">
-          <i class="bi bi-search search-icon"></i>
-          <input ref="mobileSearch" v-model="q" @keyup.enter="search" class="form-control search-input w-100" placeholder="Suche nach Events, Künstlern, Orten…">
+        <div class="d-flex">
+          <div class="position-relative flex-grow-1 me-2">
+            <i class="bi bi-search search-icon"></i>
+            <input ref="mobileSearch" v-model="q" @keyup.enter="search" class="form-control search-input w-100" placeholder="Suche nach Events, Künstlern, Orten…">
+          </div>
+          <select v-model="filter" class="form-select w-auto" @change="search">
+            <option value="all">Alles</option>
+            <option value="events">Events</option>
+            <option value="acts">Künstler</option>
+            <option value="locations">Orte</option>
+          </select>
         </div>
       </div>
     </div>
@@ -52,18 +100,35 @@
 </template>
 
 <script setup>
+import { useAuth } from '@/composables/useAuth'
+
 const q = ref('')
-const { theme, toggle } = useTheme()   // auto-import aus /composables
+const filter = ref('all')
+const { isLoggedIn, user } = useAuth()
 
 function search() {
-  if (!q.value) return
-  navigateTo(`/explore?q=${encodeURIComponent(q.value)}`)
+  const term = q.value.trim()
+  if (!term) return
+  navigateTo({
+    path: '/search',
+    query: { q: term, type: filter.value, page: 1 }
+  })
 }
 </script>
 
 
 <style scoped>
-.search-desktop{
-  margin-left: 10px;
+.search-desktop{ margin-left: 10px; }
+
+/* grüner Punkt unten rechts am Profil-Icon */
+.status-dot{
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #28a745; /* Bootstrap success */
+  border: 2px solid currentColor; /* sauberer Rand auf jedem Theme */
 }
 </style>
