@@ -6,13 +6,8 @@
         <i class="bi bi-ticket-perforated-fill me-2 text-primary"></i> MyEventVerse
       </NuxtLink>
 
-      <!-- Center: Desktop search -->
-      <div class="nav-center search-desktop">
-        <div class="search-wrap-desktop position-relative w-100">
-          <i class="bi bi-search search-icon"></i>
-          <input v-model="q" @keyup.enter="search" class="form-control search-input" placeholder="Suche nach Events, Künstlern, Orten…">
-        </div>
-      </div>
+      <!-- Center: Desktop Search -->
+      <SearchBarWithFilter variant="desktop" />
 
       <!-- Right: Actions -->
       <div class="nav-actions">
@@ -20,7 +15,6 @@
           <i class="bi bi-compass"></i><span class="ms-1">Entdecken</span>
         </NuxtLink>
 
-        <!-- Login nur wenn NICHT eingeloggt -->
         <NuxtLink
           v-if="!isLoggedIn"
           to="/auth/lookup"
@@ -29,7 +23,6 @@
           <i class="bi bi-person-circle"></i><span class="ms-1">Login</span>
         </NuxtLink>
 
-        <!-- Wenn eingeloggt: nur Profil-Icon + sichtbarer Statuspunkt -->
         <NuxtLink
           v-else
           to="/account"
@@ -40,23 +33,14 @@
             <i class="bi bi-person-circle"></i>
             <span class="status-dot" aria-label="eingeloggt"></span>
           </span>
-          <!-- Optional: Email zeigen ab XL -->
-          <span class="ms-1 d-none d-xl-inline">{{ user?.email }}</span>
-        </NuxtLink>
-
-        <NuxtLink to="/cart" class="btn btn-link text-decoration-none">
-          <i class="bi bi-bag"></i><span class="d-none d-lg-inline ms-1">Warenkorb</span>
+          <span class="ms-1 d-none d-xl-inline">{{ currentUser }}</span>
         </NuxtLink>
 
         <!-- Mobile quick icons -->
-        <button class="btn btn-link text-decoration-none d-lg-none" @click="mobileSearch?.focus()">
-          <i class="bi bi-search"></i>
-        </button>
         <NuxtLink to="/explore" class="btn btn-link text-decoration-none d-lg-none">
           <i class="bi bi-compass"></i>
         </NuxtLink>
 
-        <!-- Mobile: Profil-Icon statt Login -->
         <NuxtLink
           v-if="isLoggedIn"
           to="/account"
@@ -76,46 +60,26 @@
         >
           <i class="bi bi-person-circle"></i>
         </NuxtLink>
+
+        <NuxtLink to="/cart" class="btn btn-link text-decoration-none">
+          <i class="bi bi-bag"></i><span class="d-none d-lg-inline ms-1">Warenkorb</span>
+        </NuxtLink>
       </div>
     </div>
 
     <!-- Mobile full-width search unter navbar -->
-    <div class="search-mobile border-top">
-      <div class="container-fluid py-2">
-        <div class="d-flex">
-          <div class="position-relative flex-grow-1 me-2">
-            <i class="bi bi-search search-icon"></i>
-            <input ref="mobileSearch" v-model="q" @keyup.enter="search" class="form-control search-input w-100" placeholder="Suche nach Events, Künstlern, Orten…">
-          </div>
-          <select v-model="filter" class="form-select w-auto" @change="search">
-            <option value="all">Alles</option>
-            <option value="events">Events</option>
-            <option value="acts">Künstler</option>
-            <option value="locations">Orte</option>
-          </select>
-        </div>
-      </div>
-    </div>
+    <SearchBarWithFilter variant="mobile" />
   </header>
 </template>
 
 <script setup>
 import { useAuth } from '@/composables/useAuth'
+import SearchBarWithFilter from '@/components/SearchBarWithFilter.vue'
 
-const q = ref('')
-const filter = ref('all')
 const { isLoggedIn, user } = useAuth()
 
-function search() {
-  const term = q.value.trim()
-  if (!term) return
-  navigateTo({
-    path: '/search',
-    query: { q: term, type: filter.value, page: 1 }
-  })
-}
+const currentUser = user?.value.email || 'Gast'
 </script>
-
 
 <style scoped>
 .search-desktop{ margin-left: 10px; }
@@ -129,6 +93,6 @@ function search() {
   height: 8px;
   border-radius: 9999px;
   background: #28a745; /* Bootstrap success */
-  border: 2px solid currentColor; /* sauberer Rand auf jedem Theme */
+  border: 2px solid currentColor;
 }
 </style>

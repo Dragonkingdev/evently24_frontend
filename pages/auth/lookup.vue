@@ -65,16 +65,13 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
-definePageMeta({ layout: 'userauthlayout' })
+definePageMeta({ layout: 'userauthlayout', guest: true })
 
 const route = useRoute()
 const router = useRouter()
-const redirect = route.query.redirect || '/dashboard'
-
 const email = ref(route.query.email || '')
 const error = ref('')
 const loading = ref(false)
-
 const { lookup } = useAuth()
 
 const submit = async () => {
@@ -83,7 +80,14 @@ const submit = async () => {
   try {
     const exists = await lookup(email.value)
     const target = exists ? '/auth/login' : '/auth/register'
-    await router.push(`${target}?email=${encodeURIComponent(email.value)}&redirect=${encodeURIComponent(redirect)}`)
+
+    const params = new URLSearchParams({ email: email.value })
+    // redirect NUR weiterreichen, wenn vorhanden – sonst Default "/"
+    if (typeof route.query.redirect === 'string' && route.query.redirect.length) {
+      params.set('redirect', route.query.redirect)
+    }
+
+    await router.push(`${target}?${params.toString()}`)
   } catch (err) {
     error.value = err?.message || 'Ein Fehler ist aufgetreten.'
   } finally {

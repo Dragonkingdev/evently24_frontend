@@ -83,15 +83,26 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
-definePageMeta({ layout: 'userauthlayout' })
+definePageMeta({ layout: 'userauthlayout', guest: true })
 
 const route = useRoute()
 const router = useRouter()
+
+// Redirect säubern (kein externes Ziel, keine /auth-Route); Default "/"
+const sanitizeRedirect = (q, fallback = '/') => {
+  if (!q || typeof q !== 'string') return fallback
+  try { q = decodeURIComponent(q) } catch {}
+  if (!q.startsWith('/') || q.startsWith('//')) return fallback
+  if (q.startsWith('/auth')) return fallback
+  return q
+}
+
 const email = route.query.email || ''
-const redirect = route.query.redirect || '/dashboard'
+const safeRedirect = sanitizeRedirect(route.query.redirect, '/')
 
 if (!email) {
-  router.replace(`/auth/lookup?redirect=${encodeURIComponent(redirect)}`)
+  const qs = safeRedirect !== '/' ? `?redirect=${encodeURIComponent(safeRedirect)}` : ''
+  router.replace(`/auth/lookup${qs}`)
 }
 
 const password = ref('')
@@ -105,7 +116,7 @@ const submit = async () => {
   loading.value = true
   try {
     await login({ email, password: password.value })
-    await router.push(redirect)
+    await router.push(safeRedirect) // "/" oder z. B. "/business"
   } catch (err) {
     error.value = err?.message || 'Login fehlgeschlagen.'
   } finally {

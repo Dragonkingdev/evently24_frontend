@@ -90,11 +90,20 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
-definePageMeta({ layout: 'userauthlayout' })
+definePageMeta({ layout: 'userauthlayout', guest: true })
 
 const route = useRoute()
 const router = useRouter()
-const redirect = route.query.redirect || '/dashboard'
+
+// Redirect säubern; Default "/"
+const sanitizeRedirect = (q, fallback = '/') => {
+  if (!q || typeof q !== 'string') return fallback
+  try { q = decodeURIComponent(q) } catch {}
+  if (!q.startsWith('/') || q.startsWith('//')) return fallback
+  if (q.startsWith('/auth')) return fallback
+  return q
+}
+const safeRedirect = sanitizeRedirect(route.query.redirect, '/')
 
 const email = ref(route.query.email || '')
 const firstName = ref('')
@@ -114,13 +123,17 @@ const submit = async () => {
   error.value = ''
   loading.value = true
   try {
-    await register({ email: email.value, password: password.value, firstName: firstName.value, lastName: lastName.value })
-    await router.push(redirect)
+    await register({
+      email: email.value,
+      password: password.value,
+      firstName: firstName.value,
+      lastName: lastName.value
+    })
+    await router.push(safeRedirect) // "/" oder z. B. "/business"
   } catch (err) {
     error.value = err?.message || 'Registrierung fehlgeschlagen.'
   } finally {
     loading.value = false
   }
 }
-
 </script>

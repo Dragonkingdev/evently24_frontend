@@ -74,7 +74,7 @@ p{ color: var(--text); }
 
 /* Search */
 .search-wrap-desktop{ width:min(720px, 90%); }
-.search-input{ border-radius:999px; padding-left:2.5rem; height:44px; }
+.search-input{ border-radius:999px; padding-left:2.5rem; height:38px; }
 .search-icon{ position:absolute; left:.75rem; top:50%; transform:translateY(-50%); color:var(--muted); }
 
 /* Mobile behavior */
