@@ -21,7 +21,7 @@ export default defineNuxtConfig({
   ],
   nitro: {
     devProxy: {
-      '/api': {
+      '/api/': {
         target: 'http://localhost:8000',
         changeOrigin: true
       }
@@ -32,6 +32,6 @@ export default defineNuxtConfig({
       apiBaseUrl: 'http://localhost:8000/api'
     }
   },
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: '2025-09-08',
   devtools: { enabled: true }
 })

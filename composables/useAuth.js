@@ -7,7 +7,7 @@ export const useAuth = () => {
   // 📧 CHECK EMAIL (Identifikation)
   const lookup = async (email) => {
     try {
-      const data = await $fetch(`${apiBase}/user/check-email`, {
+      const data = await $fetch(`${apiBase}/auth/check-email`, {
         method: 'POST',
         body: { email },
       })
@@ -20,7 +20,7 @@ export const useAuth = () => {
   // 🔐 LOGIN
   const login = async ({ email, password }) => {
     try {
-      const data = await $fetch(`${apiBase}/user/login`, {
+      const data = await $fetch(`${apiBase}/auth/login`, {
         method: 'POST',
         body: { email, password },
         credentials: 'include'
@@ -43,7 +43,7 @@ export const useAuth = () => {
   // 🆕 REGISTER
   const register = async ({ email, password }) => {
     try {
-      await $fetch(`${apiBase}/user/register`, {
+      await $fetch(`${apiBase}/auth/register`, {
         method: 'POST',
         body: { email, password },
       })
@@ -60,7 +60,7 @@ export const useAuth = () => {
     if (!user.value || !sessionKey.value) return
 
     try {
-      await $fetch(`${apiBase}/user/logout`, {
+      await $fetch(`${apiBase}/auth/logout`, {
         method: 'POST',
         body: {
           email: user.value.email,
@@ -81,7 +81,7 @@ export const useAuth = () => {
     if (!sessionKey.value || !user.value?.email) return
 
     try {
-      const data = await $fetch(`${apiBase}/user/authenticated`, {
+      const data = await $fetch(`${apiBase}/auth/authenticated`, {
         method: 'POST',
         body: {
           email: user.value.email,

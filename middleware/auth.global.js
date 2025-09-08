@@ -6,14 +6,16 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (process.server) {
     // SSR: HttpOnly-Cookies sind hier verfügbar
     const session = useCookie('session_key')
-    if (!session.value) return navigateTo('/user/lookup')
+    console.log('Auth Middleware (SSR): session_key=', session.value)
+    if (!session.value) return navigateTo('/auth/lookup')
     return
   }
 
   // Client: HttpOnly ist unsichtbar → kurzer Auth-Ping
+  const { public: { apiBaseUrl } } = useRuntimeConfig()
   try {
-    await $fetch('/api/user/auth', { credentials: 'include', cache: 'no-cache' })
+    await $fetch(`${apiBaseUrl}/auth`, { credentials: 'include', cache: 'no-cache' })
   } catch {
-    return navigateTo('/user/lookup')
+    return navigateTo('/auth/lookup')
   }
 })

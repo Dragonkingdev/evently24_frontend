@@ -25,7 +25,7 @@
             />
 
             <NuxtLink
-              to="/user/lookup"
+              to="/auth/lookup"
               class="position-absolute text-primary text-decoration-none small"
               style="
                 right: 12px;
@@ -63,7 +63,7 @@
       </form>
 
       <div class="text-center small">
-        <NuxtLink to="/user/lookup" class="text-decoration-none text-muted">
+        <NuxtLink to="/auth/lookup" class="text-decoration-none text-muted">
           Mit anderer E-Mail anmelden
         </NuxtLink>
       </div>

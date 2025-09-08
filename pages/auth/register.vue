@@ -65,7 +65,7 @@
       <!-- Login-Link -->
       <div class="text-center small mb-3">
         Hast du bereits ein Knowpass-Konto?
-        <NuxtLink to="/user/login" class="text-decoration-none text-primary">Anmelden →</NuxtLink>
+        <NuxtLink to="/auth/login" class="text-decoration-none text-primary">Anmelden →</NuxtLink>
       </div>
 
       <!-- Rechtliches -->

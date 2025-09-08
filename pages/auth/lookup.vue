@@ -47,7 +47,7 @@
 
       <!-- Registrierung -->
       <div class="text-center small">
-        Neu bei Knowpass? <NuxtLink to="/user/register" class="text-decoration-none text-primary">Jetzt starten →</NuxtLink>
+        Neu bei Knowpass? <NuxtLink to="/auth/register" class="text-decoration-none text-primary">Jetzt starten →</NuxtLink>
       </div>
 
       <!-- Footer -->
@@ -80,9 +80,9 @@ const submit = async () => {
     const exists = await lookup(email.value)
 
     if (exists) {
-      await navigateTo(`/user/login?email=${encodeURIComponent(email.value)}`)
+      await navigateTo(`/auth/login?email=${encodeURIComponent(email.value)}`)
     } else {
-      await navigateTo(`/user/register?email=${encodeURIComponent(email.value)}`)
+      await navigateTo(`/auth/register?email=${encodeURIComponent(email.value)}`)
     }
   } catch (err) {
     error.value = err?.message || 'Ein Fehler ist aufgetreten.'

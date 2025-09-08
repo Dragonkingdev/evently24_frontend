@@ -22,7 +22,7 @@
         <NuxtLink to="/explore" class="btn btn-link text-decoration-none d-none d-lg-inline-flex">
           <i class="bi bi-compass"></i><span class="ms-1">Entdecken</span>
         </NuxtLink>
-        <NuxtLink to="/user/lookup" class="btn btn-link text-decoration-none d-none d-lg-inline-flex">
+        <NuxtLink to="/auth/lookup" class="btn btn-link text-decoration-none d-none d-lg-inline-flex">
           <i class="bi bi-person-circle"></i><span class="ms-1">Login</span>
         </NuxtLink>
         <NuxtLink to="/cart" class="btn btn-link text-decoration-none">
