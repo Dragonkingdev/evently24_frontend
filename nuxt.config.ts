@@ -5,10 +5,10 @@ export default defineNuxtConfig({
   ],
    app: {
     head: {
-      title: 'KnowPass',
+      title: 'Evently - Ticket System',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Ticket Sytsem für Jederman' }
+        { name: 'description', content: 'Ticket System für Jedermann' }
       ],
         link: [
           { rel: 'icon', type: 'image/png', href: '/favicon.png' }

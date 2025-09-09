@@ -1,5 +1,5 @@
 <template>
-  <header class="nav-shell">
+  <header class="nav-shell" v-if="authReady">
     <div class="container-fluid d-flex justify-content-between align-items-center py-2">
       <!-- Left: Logo -->
       <NuxtLink to="/" class="nav-logo d-flex align-items-center mr-2">
@@ -76,9 +76,16 @@
 import { useAuth } from '@/composables/useAuth'
 import SearchBarWithFilter from '@/components/SearchBarWithFilter.vue'
 
-const { isLoggedIn, user } = useAuth()
+const { isLoggedIn, user, authReady, fetchUser } = useAuth()
 
-const currentUser = user?.value.email || 'Gast'
+if (process.server) {
+  await fetchUser().catch(() => {})
+}
+
+const currentUser = computed(() => {
+  const u = user?.value
+  return u && u.email ? u.email : 'Gast'
+})
 </script>
 
 <style scoped>
