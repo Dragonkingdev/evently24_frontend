@@ -1,9 +1,12 @@
-<!-- components/ui/EventCard.vue -->
 <template>
-  <div class="event-card mt-2">
+  <NuxtLink
+    class="event-card mt-2 text-decoration-none"
+    :to="ev.href || `/event/${ev.slug || ev.id}`"
+    :aria-label="`Event: ${ev.title}`"
+  >
     <div class="poster" :style="{ backgroundImage: `url(${ev.img})` }"></div>
 
-    <div class="info mt-2">
+    <div class="info mt-2 text-dark">
       <h5 class="mb-1 fw-bold text-truncate">{{ ev.title }}</h5>
       <p class="small mb-1">
         <i class="bi bi-geo-alt me-1"></i>{{ ev.city }}
@@ -24,14 +27,14 @@
         </div>
       </div>
     </div>
-  </div>
+  </NuxtLink>
 </template>
 
 <script setup>
 const props = defineProps({ ev: { type: Object, required: true } })
 
 const priceLabel = computed(() => {
-  if (props.ev.price == null) return ''         // kein Preis -> nichts anzeigen
+  if (props.ev.price == null) return ''
   const p = Number(props.ev.price).toFixed(0)
   return `ab ${p} €`
 })
@@ -43,40 +46,18 @@ function formatDate(date) {
 </script>
 
 <style scoped>
-.event-card {
-  width: 260px; /* Standard (Desktop) */
-  flex-shrink: 0;
+.event-card { display:block; width:260px; flex-shrink:0; }
+.poster{
+  width:100%; aspect-ratio:2/3;
+  background-size:cover; background-position:center;
+  border-radius:.75rem; box-shadow:0 4px 10px rgba(0,0,0,.1);
+  transition: transform .2s ease, box-shadow .2s ease;
 }
-
-.poster {
-  width: 100%;
-  aspect-ratio: 2 / 3; /* Poster-Format */
-  background-size: cover;
-  background-position: center;
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.poster:hover {
-  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-}
-
-.info {
-  background: transparent; /* kein Hintergrund */
-}
+.event-card:hover .poster{ box-shadow:0 8px 20px rgba(0,0,0,.25); }
+.info{ background:transparent; }
 
 /* Tablet */
-@media (max-width: 992px) {
-  .event-card {
-    width: 200px;
-  }
-}
-
+@media (max-width: 992px){ .event-card{ width:200px } }
 /* Mobile */
-@media (max-width: 576px) {
-  .event-card {
-    width: 150px;
-  }
-}
+@media (max-width: 576px){ .event-card{ width:150px } }
 </style>

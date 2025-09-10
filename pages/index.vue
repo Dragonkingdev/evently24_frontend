@@ -108,7 +108,18 @@ const mapEventCard = (ev) => {
   const minPrice = catPrices.length ? Math.min(...catPrices) : null
   const img = ev?.tour?.poster || ev?.tour?.image || `https://picsum.photos/seed/event-${ev.id}/640/400`
   const city = ev.city || ev?.location?.city || '—'
-  return { id: ev.id, title: ev.title, city, date: ev.date, price: minPrice, img, tags: ev?.tour?.subtitle ? [ev.tour.subtitle] : [] }
+  const href = `/event/${ev.slug || ev.id}` // Route definieren
+
+  return {
+    id: ev.id,
+    title: ev.title,
+    city,
+    date: ev.date,
+    price: minPrice,
+    img,
+    tags: ev?.tour?.subtitle ? [ev.tour.subtitle] : [],
+    href
+  }
 }
 const events    = computed(() => eventsRaw.value.map(mapEventCard))
 const featured  = computed(() => tours.value.slice(0, 6).map(t => ({
