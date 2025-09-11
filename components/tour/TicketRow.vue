@@ -30,18 +30,19 @@ function parts (iso) {
 
 /** Preis sicher ermitteln und formatieren */
 function getMinPrice (ev) {
-  // was auch immer dein Backend liefert – wir probieren in Reihenfolge
   const raw =
-    ev?.minPrice ??
-    ev?.price_from_eur ??
-    (Array.isArray(ev?.tiers) && ev.tiers.length ? Math.min(...ev.tiers.map(t => +t.price_eur || Infinity)) : undefined)
+    ev?.min_price_eur ??                  // 🔥 neu: vom Backend
+    ev?.minPrice ??                       // evtl. CamelCase aus anderer Quelle
+    ev?.price_from_eur ??                 // dein alter Fallback
+    (Array.isArray(ev?.tiers) && ev.tiers.length
+      ? Math.min(...ev.tiers.map(t => +t.price_eur || Infinity))
+      : undefined)
 
   if (raw == null || raw === Infinity) return null
 
   try {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(raw)
   } catch {
-    // Fallback ohne Intl
     return `${Number(raw).toFixed(2)} €`
   }
 }
@@ -83,7 +84,9 @@ const priceText = computed(() => getMinPrice(props.ev))
           ab <span class="fw-semibold text-body">{{ priceText }}</span>
         </div>
         <div class="price small-muted mb-1" v-else>Preise folgen</div>
-        <NuxtLink :to="`/tickets/${ev.id}`" class="btn btn-primary px-4">Weiter</NuxtLink>
+        <NuxtLink :to="ev?.slug ? { name: 'event-slug', params: { slug: ev.slug } } : `/event/${ev.id}`" class="btn btn-primary px-4">
+          Weiter
+        </NuxtLink>
       </div>
     </div>
   </div>

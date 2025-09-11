@@ -17,7 +17,11 @@
         </div>
       </div>
       <div class="col-md-5 text-md-end">
-        <NuxtLink to="/tours" class="btn btn-link text-decoration-none">
+        <NuxtLink
+          :to="backLink"
+          class="btn btn-link text-decoration-none"
+          @click="handleBackClick"
+        >
           <i class="bi bi-arrow-left"></i> Zurück zur Übersicht
         </NuxtLink>
       </div>
@@ -48,11 +52,18 @@
                     </div>
                   </div>
                   <div>
-                    <input type="number" class="form-control form-control-sm" style="width:90px" min="0" :max="t.stock ?? undefined" v-model.number="quantities[t.id]" />
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      style="width:90px"
+                      min="0"
+                      :max="t.stock ?? undefined"
+                      v-model.number="quantities[t.id]"
+                    />
                   </div>
                 </div>
               </div>
-              <div v-else class="text-muted mt-3">
+              <div class="text-muted mt-3" v-else>
                 Für diesen Termin sind aktuell keine Ticketkategorien angelegt.
               </div>
 
@@ -96,7 +107,7 @@
       <!-- RIGHT -->
       <div class="col-lg-5">
         <div class="card border-0 shadow-sm sticky-top" style="top:1rem">
-          <img :src="ev.img || '/placeholder-event.jpg'" class="card-img-top" alt="">
+          <img :src="'https://picsum.photos/seed/9323317c/1200/800'" class="card-img-top" alt="">
           <div class="card-body">
             <h5 class="card-title">Bestellübersicht</h5>
             <div class="small text-muted mb-2">
@@ -122,10 +133,10 @@
               <div class="fw-bold fs-5">{{ fmt(total) }}</div>
             </div>
 
-            <button class="btn btn-primary w-100 mt-3" :disabled="totalQty===0" @click="logOrder">
-              <i class="bi bi-lock"></i> Zur Kasse (Demo-Log)
+            <button class="btn btn-primary w-100 mt-3" :disabled="totalQty===0" @click="goCheckout">
+              <i class="bi bi-bag-plus"></i> In den Warenkorb
             </button>
-            <div class="small text-muted mt-2">Demo: Es wird nichts bestellt – nur Konsolen-Ausgabe.</div>
+            <div class="small text-muted mt-2">Deine Auswahl wird im nächsten Schritt 15 Min. reserviert.</div>
           </div>
         </div>
       </div>
@@ -135,15 +146,16 @@
 
 <script setup>
 import { ref, reactive, computed, watchEffect } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import SeatMapPicker from '~/components/seatmap/SeatMapPicker.vue'
 import { useApi } from '~/composables/useApi'
 
 const route = useRoute()
+const router = useRouter()
 const slug = String(route.params.slug || '')
-const { get } = useApi()
+const { get, post } = useApi() // post wird verwendet!
 
-// Status aus verschiedenen Fehler-Formaten ableiten (ofetch/axios)
+// Status aus verschiedenen Fehler-Formaten ableiten
 function toStatus (e) {
   return Number(
     e?.status ??
@@ -160,16 +172,14 @@ const { data: state } = await useAsyncData(
   async () => {
     try {
       const res = await get(`/events/${slug}/bundle`)
-      // WICHTIG: Dein useApi gibt bei Fehlern { error } zurück statt throw.
       if (res?.error) {
         const status = toStatus(res.error) || Number(res?.status || 0) || 500
-        if (status === 404) return { status: 404 }        // nur Text
-        return { status }                                  // kurzer Fehlertext
+        if (status === 404) return { status: 404 }
+        return { status }
       }
       const status = Number(res?.status ?? 200)
       if (status === 404) return { status: 404 }
       if (status !== 200) return { status }
-      // Erfolg: nur Plain-Data
       return { status: 200, data: res?.data ?? null }
     } catch (e) {
       const status = toStatus(e) || 500
@@ -181,11 +191,11 @@ const { data: state } = await useAsyncData(
 )
 
 // Flags
-const is404 = computed(() => state.value?.status === 404)
-const hasData = computed(() => state.value?.status === 200 && !!state.value?.data?.event)
-const isError = computed(() => !!state.value && state.value.status !== 200 && state.value.status !== 404)
+const is404  = computed(() => state.value?.status === 404)
+const hasData= computed(() => state.value?.status === 200 && !!state.value?.data?.event)
+const isError= computed(() => !!state.value && state.value.status !== 200 && state.value.status !== 404)
 
-// Daten (nur bei hasData verwenden)
+// Daten
 const ev = computed(() => state.value?.data?.event)
 
 // Datumsteile
@@ -193,9 +203,9 @@ function dparts (iso) {
   const d = iso ? new Date(iso) : null
   if (!d || isNaN(d.getTime())) return { date: '—', time: '—', weekday: '—' }
   return {
-    date: new Intl.DateTimeFormat('de-DE', { day:'2-digit', month:'long', year:'numeric' }).format(d),
-    time: new Intl.DateTimeFormat('de-DE', { hour:'2-digit', minute:'2-digit' }).format(d),
-    weekday: new Intl.DateTimeFormat('de-DE', { weekday:'long' }).format(d)
+    date: new Intl.DateTimeFormat('de-DE',{ day:'2-digit', month:'long', year:'numeric' }).format(d),
+    time: new Intl.DateTimeFormat('de-DE',{ hour:'2-digit', minute:'2-digit' }).format(d),
+    weekday: new Intl.DateTimeFormat('de-DE',{ weekday:'long' }).format(d)
   }
 }
 const dp = computed(() => dparts(ev.value?.date))
@@ -209,6 +219,19 @@ const tiers = computed(() =>
     stock: t.stock ?? null
   }))
 )
+
+// Back-Link: bevorzugt Tour, sonst Startseite
+const backLink = computed(() => {
+  const tslug = ev.value?.tour_slug
+  if (tslug) return `/tour/${tslug}`
+  return '/'
+})
+function handleBackClick(e) {
+  if (!backLink.value || backLink.value === '#') {
+    e.preventDefault()
+    router.back()
+  }
+}
 
 // Mengen/Seatmap/UI
 const quantities = reactive({})
@@ -267,38 +290,40 @@ function fmt (n) {
   return num.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
 }
 
-function logOrder () {
-  const orderId = String(Date.now())
-  const gaItems = tiers.value
-    .map(t => ({ name: t.name, unit: t.price_eur || 0, qty: (quantities[t.id] || 0) }))
-    .filter(x => x.qty > 0)
-    .map(x => ({ kind: 'ga', label: x.name, qty: x.qty, unit: x.unit, total: x.qty * x.unit }))
-  const seatByCat = selectedSeats.value.reduce((acc, s) => {
-    const k = s.catId || 'seat'
-    acc[k] ??= { label: s.catName || 'Sitzplatz', qty: 0, total: 0, unit: s.price || 0, seats: [] }
-    acc[k].qty += 1
-    acc[k].total += s.price || 0
-    acc[k].seats.push(s.label)
-    return acc
-  }, {})
-  const seatItems = Object.values(seatByCat).map(x => ({ kind: 'seat', ...x }))
+async function goCheckout () {
+  // 1) Items aus GA
+  const items = Object.entries(quantities)
+    .map(([catId, qty]) => ({ category_id: Number(catId), quantity: Number(qty) }))
+    .filter(x => x.quantity > 0)
+
+  // 2) Seats (falls Seatmap genutzt)
+  const seat_ids = selectedSeats.value.map(s => Number(s.id)).filter(Boolean)
+
+  if (!items.length && !seat_ids.length) return
+
+  // WICHTIG: Nur nicht-leere Felder mitsenden (sonst 422 wegen min_length=1)
   const payload = {
-    orderId,
-    createdAt: Date.now(),
-    event: {
-      id: ev.value.id,
-      slug,
-      title: ev.value.title,
-      city: ev.value.city,
-      venue: ev.value.venue,
-      dateISO: ev.value.date,
-      img: ev.value.img || null
-    },
-    items: [...gaItems, ...seatItems],
-    fees: { addonHotel: addonFee.value, service: serviceFee.value },
-    sum: { subtotal: subtotal.value, total: total.value },
-    meta: { email: email.value || '', reserveUntil: Date.now() + 20 * 60 * 1000 }
+    event_id: ev.value.id,
+    buyer_email: email.value || null,
+    ...(items.length ? { items } : {}),
+    ...(seat_ids.length ? { seat_ids } : {})
   }
-  console.log('[DEMO ORDER]', payload)
+
+  const res = await post('/orders', payload)
+  if (res?.error) {
+    alert(res.error?.message || 'Reservierung fehlgeschlagen')
+    return
+  }
+
+  // DEV-Only: Falls Proxy Set-Cookie killt, legen wir es sichtbar (nicht-HttpOnly) ab.
+  try {
+    if (process.dev && res?.data?.access_token) {
+      const t = useCookie('ORDER_TOKEN', { sameSite: 'lax', path: '/' })
+      if (!t.value) t.value = res.data.access_token
+    }
+  } catch {/* ignore */}
+
+  const { order_id } = res.data
+  await navigateTo(`/cart/${order_id}`)
 }
 </script>

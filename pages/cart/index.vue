@@ -1,0 +1,3 @@
+<template>
+    Der warenkorb
+</template>

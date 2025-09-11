@@ -6,7 +6,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // Seiten-Flags
   const needsAuth = to.meta.auth === true
     || to.path.startsWith('/dashboard')
-    || to.path.startsWith('/business') // <— geschützt
+    || to.path.startsWith('/business')
+    || to.path.startsWith('/checkout')
+    
   const guestOnly = to.meta.guest === true || to.path.startsWith('/auth')
 
   // Redirect säubern (kein externes Ziel, kein /auth/*)
