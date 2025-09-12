@@ -29,7 +29,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // WICHTIG: gleiche Origin nutzen → kein CORS, Cookies funktionieren
-      apiBaseUrl: '/api'
+      apiBaseUrl: '/api',
+      appUrl: process.env.NUXT_PUBLIC_APP_URL,
+      stripePk: process.env.NUXT_PUBLIC_STRIPE_PK,
     }
   },
   compatibilityDate: '2025-09-08',
