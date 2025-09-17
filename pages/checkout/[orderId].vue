@@ -1,5 +1,7 @@
+<!-- pages/checkout/[orderId].vue -->
 <template>
-  <div class="container py-4" v-if="loaded">
+  <!-- WICHTIG: kein v-if mehr auf dem Root-Container, damit #payment-element beim Mount existiert -->
+  <div class="container py-4">
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h1 class="h4 mb-0">Kasse</h1>
       <NuxtLink :to="`/cart/${orderId}`" class="btn btn-link text-decoration-none">
@@ -24,29 +26,25 @@
             <h5 class="card-title mb-3">Schnell bezahlen</h5>
             <div class="row g-3 align-items-center">
               <div class="col-12 col-md-6">
-                <!-- Stripe Payment Request Button (Apple/Google Pay) -->
+                <!-- Payment Request Button nur bei HTTPS + validen Stammdaten -->
                 <div v-if="prButtonAvailable">
                   <div id="payment-request-button"></div>
                   <div class="small text-muted mt-2">Bezahlen mit Apple Pay / Google Pay</div>
                 </div>
                 <div v-else class="text-muted small">
-                  Apple/Google Pay wird in deinem Browser/Gerät nicht unterstützt.
+                  Apple/Google Pay ist hier nicht verfügbar (HTTPS & vollständige Rechnungsdaten nötig).
                 </div>
               </div>
               <div class="col-12 col-md-6 d-flex gap-2">
-                <!-- PayPal Stub -->
                 <button class="btn btn-outline-secondary w-100" disabled title="Demnächst">
                   <i class="bi bi-paypal"></i> PayPal (bald)
                 </button>
               </div>
             </div>
-            <div class="small text-muted mt-2">
-              Hinweis: Die Schnellzahlung erscheint erst, wenn die Rechnungsdaten vollständig sind und du die AGB akzeptiert hast.
-            </div>
           </div>
         </div>
 
-        <!-- Rechnungsdaten + Karten/SEPA etc. -->
+        <!-- Rechnungsdaten + Payment Element -->
         <div class="card border-0 shadow-sm">
           <div class="card-body">
             <h5 class="card-title mb-3">Rechnungsdaten</h5>
@@ -103,12 +101,10 @@
 
             <hr class="my-4" />
 
-            <!-- Payment Element -->
-            <div v-if="clientSecret" class="mb-3">
-              <div id="payment-element"></div>
-            </div>
-            <div v-else class="alert alert-info">
-              Zahlungsmodul wird initialisiert … (Form ausfüllen & AGB akzeptieren)
+            <!-- Payment Element Platzhalter IMMER im DOM -->
+            <div class="mb-3">
+              <div id="payment-element" ref="paymentEl"></div>
+              <div v-if="!clientSecret" class="small text-muted mt-2">Zahlungsmodul wird initialisiert …</div>
             </div>
 
             <button
@@ -159,8 +155,10 @@
           </div>
         </div>
       </div>
-
     </div>
+
+    <!-- Optional: Mini-Placeholder solange Order lädt -->
+    <div v-else class="text-muted">Bestellung wird geladen …</div>
   </div>
 </template>
 
@@ -181,7 +179,6 @@ const router = useRouter()
 const { get, put, post } = useApi()
 
 const orderId = Number(route.params.orderId || 0)
-const loaded = ref(false)
 
 const order = ref(null)
 const ttl = ref(0)
@@ -193,13 +190,12 @@ const kaError = ref('')
 const payMessage = ref('')
 const payOk = ref(false)
 
-let tickTimer = null
-let keepAliveTimer = null
-
 // Stripe
 let stripe = null
 let elements = null
 let paymentElement = null
+const paymentMounted = ref(false)
+const paymentEl = ref(null)
 const clientSecret = ref('')
 const prButtonAvailable = ref(false)
 let paymentRequest = null
@@ -219,8 +215,8 @@ function fmt (n) { const num = Number.isFinite(n) ? n : 0; return num.toLocaleSt
 const displayItems = computed(() => {
   const items = Array.isArray(order.value?.items) ? order.value.items : []
   return items.map((it, idx) => ({
-    key: `it-${idx}-${it.category_id}`,
-    label: `Kategorie ${it.category_id}`,
+    key: `it-${idx}-${it.ticket_category_id ?? it.sku ?? idx}`,
+    label: it.ticket_category_id ? `Kategorie ${it.ticket_category_id}` : (it.name || 'Artikel'),
     quantity: it.quantity || 0,
     unit_price: Number(it.unit_price || 0),
     total: Number(it.unit_price || 0) * (it.quantity || 0),
@@ -263,13 +259,14 @@ function startTick () {
   }
 }
 function stopTick () { if (tickTimer) { clearInterval(tickTimer); tickTimer = null } }
+let tickTimer = null
 
 function startKeepAlive () {
   stopKeepAlive()
   keepAliveTimer = setInterval(async () => {
     if (document.hidden) return
     if (ttl.value <= 0) return
-    const ka = await post(`/orders/${orderId}/keepalive`, {})
+    const ka = await post(`/v1/orders/${orderId}/keepalive`, {})
     if (ka?.error) {
       kaError.value = 'Reservierung konnte nicht verlängert werden (Hard Cap erreicht).'
       ttl.value = 0
@@ -281,11 +278,12 @@ function startKeepAlive () {
   }, 45000)
 }
 function stopKeepAlive () { if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null } }
+let keepAliveTimer = null
 
 async function loadOrder () {
-  const res = await get(`/orders/${orderId}`)
+  const res = await get(`/v1/orders/${orderId}`)
   if (res?.error) {
-    await router.replace(`/cart/${orderId}`)
+    await router.replace(`/v1/cart/${orderId}`)
     return
   }
   order.value = res.data
@@ -307,21 +305,105 @@ async function loadOrder () {
   }
 }
 
-async function initStripeAndElements () {
+/** Payment Element früh initialisieren – aber erst mounten, wenn DOM-Node existiert */
+async function initPaymentElementEarly () {
+  if (typeof window === 'undefined') return
   if (!STRIPE_PK) { error.value = 'Stripe Publishable Key fehlt.'; return }
-  if (!clientSecret.value) return
+
+  // 1) PaymentIntent erzeugen
+  const start = await post(`/v1/orders/${orderId}/pay-intent`, {})
+  if (start?.error) { error.value = start.error?.message || 'PaymentIntent konnte nicht erstellt werden.'; return }
+  clientSecret.value = start.data?.client_secret || start.client_secret
+  if (!clientSecret.value) { error.value = 'Client Secret fehlt.'; return }
+
+  // 2) Stripe + Elements
   if (!stripe) stripe = await loadStripe(STRIPE_PK)
   if (!stripe) { error.value = 'Stripe konnte nicht geladen werden.'; return }
   if (!elements) {
     elements = stripe.elements({ clientSecret: clientSecret.value, appearance: { theme: 'stripe' } })
   }
-  // Payment Element
-  if (!paymentElement) {
-    paymentElement = elements.create('payment')
-    paymentElement.mount('#payment-element')
+
+  // 3) Mount erst, wenn der Platzhalter im DOM ist
+  await nextTick()
+  await mountPaymentElement()
+}
+
+async function mountPaymentElement () {
+  if (paymentMounted.value) return
+  if (!paymentEl.value) return
+  if (!elements || !clientSecret.value) return
+
+  paymentElement = elements.create('payment')
+  paymentElement.mount(paymentEl.value)
+  paymentMounted.value = true
+}
+
+/** Vor Confirm: Käuferdaten speichern + TTL erneuern + Stripe bereitstellen */
+async function ensureReadyBeforeConfirm () {
+  const payload = {
+    first_name: form.value.first_name,
+    last_name: form.value.last_name,
+    email: form.value.email,
+    address: {
+      line1: form.value.address.line1,
+      line2: form.value.address.line2 || undefined,
+      postal_code: form.value.address.postal_code,
+      city: form.value.address.city,
+      country: (form.value.address.country || 'DE').toUpperCase(),
+    },
+  }
+  if (form.value.phone?.trim()) payload.phone = form.value.phone.trim()
+
+  const up = await put(`/v1/orders/${orderId}/checkout`, payload)
+  if (up?.error) throw new Error(up.error?.message || 'Checkout-Daten konnten nicht gespeichert werden.')
+
+  const ka = await post(`/v1/orders/${orderId}/keepalive`, {})
+  if (ka?.error) {
+    kaError.value = 'Reservierung konnte nicht verlängert werden (Hard Cap erreicht).'
+    ttl.value = 0
+    throw new Error('Reservation keepalive failed')
+  }
+  ttl.value = Math.max(0, Number(ka.data?.ttl_seconds || 0))
+  hardTtl.value = Math.max(0, Number(ka.data?.hard_ttl_seconds || 0))
+
+  if (!paymentMounted.value) await mountPaymentElement()
+}
+
+async function confirmPayment () {
+  error.value = ''; payMessage.value = ''; payOk.value = false
+  if (ttl.value <= 0) { error.value = 'Reservierung abgelaufen.'; return }
+  if (!canSubmit.value) { error.value = 'Bitte Pflichtfelder ausfüllen & AGB akzeptieren.'; return }
+
+  submitting.value = true
+  try {
+    await ensureReadyBeforeConfirm()
+    const { error: submitErr } = await elements.submit()
+    if (submitErr) throw submitErr
+
+    const returnUrl = `${APP_URL}/orders/success?order_id=${orderId}`
+    const { error: confErr } = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: returnUrl },
+    })
+    if (confErr) {
+      payMessage.value = confErr.message || 'Zahlung konnte nicht bestätigt werden.'
+      payOk.value = false
+      return
+    }
+  } catch (e) {
+    error.value = e?.message || 'Fehler beim Bezahlen.'
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function setupPaymentRequestButton () {
+  // PR-Button nur bei HTTPS + validen Stammdaten
+  if (!window.isSecureContext || !canSubmit.value || !stripe || !elements) {
+    prButtonAvailable.value = false
+    return
   }
 
-  // Payment Request Button (Apple/Google Pay)
   try {
     const amountCents = Math.round(Number(total.value || 0) * 100)
     paymentRequest = stripe.paymentRequest({
@@ -334,123 +416,62 @@ async function initStripeAndElements () {
     const result = await paymentRequest.canMakePayment()
     if (result) {
       prButton = elements.create('paymentRequestButton', { paymentRequest })
+      await nextTick()
       prButton.mount('#payment-request-button')
       prButtonAvailable.value = true
 
       paymentRequest.on('paymentmethod', async (ev) => {
-        // Bestätige PaymentIntent ohne Action-Handling (3DS folgt ggf. danach)
-        const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
-          clientSecret.value,
-          { payment_method: ev.paymentMethod.id },
-          { handleActions: false }
-        )
-        if (confirmError) {
+        if (!canSubmit.value) {
           ev.complete('fail')
-          payMessage.value = confirmError.message || 'Zahlung konnte nicht bestätigt werden.'
+          payMessage.value = 'Bitte Rechnungsdaten vervollständigen & AGB akzeptieren.'
           payOk.value = false
           return
-        } else {
-          ev.complete('success')
-          // Falls 3DS/SCA nötig:
-          if (paymentIntent && paymentIntent.status === 'requires_action') {
-            const { error: actionError } = await stripe.confirmCardPayment(clientSecret.value)
-            if (actionError) {
-              payMessage.value = actionError.message || 'Authentifizierung fehlgeschlagen.'
-              payOk.value = false
-              return
+        }
+        try {
+          await ensureReadyBeforeConfirm()
+          const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+            clientSecret.value,
+            { payment_method: ev.paymentMethod.id },
+            { handleActions: false }
+          )
+          if (confirmError) {
+            ev.complete('fail')
+            payMessage.value = confirmError.message || 'Zahlung konnte nicht bestätigt werden.'
+            payOk.value = false
+            return
+          } else {
+            ev.complete('success')
+            if (paymentIntent?.status === 'requires_action') {
+              const { error: actionError } = await stripe.confirmCardPayment(clientSecret.value)
+              if (actionError) {
+                payMessage.value = actionError.message || 'Authentifizierung fehlgeschlagen.'
+                payOk.value = false
+                return
+              }
             }
+            window.location.href = `${APP_URL}/orders/success?order_id=${orderId}`
           }
-          // Erfolgreich → Weiterleitung wie beim Karten-Flow
-          window.location.href = `${APP_URL}/orders/success?order_id=${orderId}`
+        } catch (e) {
+          ev.complete('fail')
+          payMessage.value = e?.message || 'Fehler beim Bezahlen.'
+          payOk.value = false
         }
       })
     } else {
       prButtonAvailable.value = false
     }
-  } catch (e) {
-    // Nicht kritisch – Element einfach nicht anzeigen
+  } catch {
     prButtonAvailable.value = false
-  }
-}
-
-async function ensurePaymentIntent () {
-  // 1) Checkout-Daten speichern (jetzt sicher: canSubmit == true)
-  const payload = {
-    first_name: form.value.first_name,
-    last_name: form.value.last_name,
-    email: form.value.email,
-    address: {
-      line1: form.value.address.line1,
-      line2: form.value.address.line2 || undefined,
-      postal_code: form.value.address.postal_code,
-      city: form.value.address.city,
-      country: (form.value.address.country || 'DE').toUpperCase(),
-    },
-    // phone optional
-  }
-  if (form.value.phone && form.value.phone.trim()) payload.phone = form.value.phone.trim()
-
-  const up = await put(`/orders/${orderId}/checkout`, payload)
-  if (up?.error) throw new Error(up.error?.message || 'Checkout-Daten konnten nicht gespeichert werden.')
-
-  // 2) Verlängern (capped)
-  const ka = await post(`/orders/${orderId}/keepalive`, {})
-  if (ka?.error) {
-    kaError.value = 'Reservierung konnte nicht verlängert werden (Hard Cap erreicht).'
-    ttl.value = 0
-    throw new Error('Reservation keepalive failed')
-  }
-  ttl.value = Math.max(0, Number(ka.data?.ttl_seconds || 0))
-  hardTtl.value = Math.max(0, Number(ka.data?.hard_ttl_seconds || 0))
-
-  // 3) PaymentIntent holen
-  const start = await post(`/orders/${orderId}/pay-intent`, {})
-  if (start?.error) throw new Error(start.error?.message || 'PaymentIntent konnte nicht erstellt werden.')
-  clientSecret.value = start.data?.client_secret || start.client_secret
-  await nextTick()
-  await initStripeAndElements()
-}
-
-async function confirmPayment () {
-  error.value = ''; payMessage.value = ''; payOk.value = false
-  if (ttl.value <= 0) { error.value = 'Reservierung abgelaufen.'; return }
-  if (!canSubmit.value) { error.value = 'Bitte Pflichtfelder ausfüllen & AGB akzeptieren.'; return }
-
-  // Wenn das PaymentIntent / Elements noch nicht bereit ist, jetzt sicherstellen
-  if (!clientSecret.value || !elements) {
-    try { await ensurePaymentIntent() } catch (e) { error.value = e?.message || 'Fehler beim Initialisieren der Zahlung.'; return }
-  }
-
-  submitting.value = true
-  try {
-    // Elements ggf. eigene Validierung triggern
-    const { error: submitErr } = await elements.submit()
-    if (submitErr) throw submitErr
-
-    const returnUrl = `${APP_URL}/orders/success?order_id=${orderId}`
-    const { error: confErr } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: returnUrl },
-      // redirect: "if_required" // Standard: auto bei 3DS/SCA
-    })
-
-    if (confErr) {
-      payMessage.value = confErr.message || 'Zahlung konnte nicht bestätigt werden.'
-      payOk.value = false
-      return
-    }
-    // Bei 3DS macht Stripe Redirect. Wenn nicht nötig, geht’s direkt weiter (Webhook setzt Order auf paid).
-  } catch (e) {
-    error.value = e?.message || 'Fehler beim Bezahlen.'
-  } finally {
-    submitting.value = false
   }
 }
 
 onMounted(async () => {
   await loadOrder()
+  // Payment Element SOFORT initialisieren (Client Secret holen & Elements erzeugen)
+  await initPaymentElementEarly()
+
   if (ttl.value > 0) {
-    const ka = await post(`/orders/${orderId}/keepalive`, {})
+    const ka = await post(`/v1/orders/${orderId}/keepalive`, {})
     if (!ka?.error) {
       ttl.value = Math.max(0, Number(ka.data?.ttl_seconds || 0))
       hardTtl.value = Math.max(0, Number(ka.data?.hard_ttl_seconds || 0))
@@ -458,15 +479,16 @@ onMounted(async () => {
   }
   startTick()
   startKeepAlive()
-  loaded.value = true
 })
 
-// Wenn Formular vollständig & AGB akzeptiert → Intent/ELE/PR-Button initialisieren
+// PR-Button erst anzeigen, wenn Form vollständig + HTTPS + Elements vorhanden
 watch(
-  () => ({ ok: canSubmit.value, ttl: ttl.value, total: total.value }),
-  async ({ ok, ttl }) => {
-    if (ok && ttl > 0 && !clientSecret.value) {
-      try { await ensurePaymentIntent() } catch (e) { error.value = e?.message || 'Fehler beim Initialisieren.' }
+  () => ({ ok: canSubmit.value, secret: clientSecret.value }),
+  async ({ ok, secret }) => {
+    if (ok && secret) {
+      await setupPaymentRequestButton()
+    } else {
+      prButtonAvailable.value = false
     }
   },
   { deep: true }
@@ -478,4 +500,6 @@ onBeforeUnmount(() => { stopTick(); stopKeepAlive() })
 <style scoped>
 .table thead th { border-bottom-color: var(--bs-border-color); }
 .sticky-top { z-index: 1020; }
+/* optional: cloak, um Flackern zu vermeiden */
+/* [v-cloak] { display: none; } */
 </style>

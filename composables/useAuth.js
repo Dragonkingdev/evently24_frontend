@@ -10,7 +10,7 @@ export const useAuth = () => {
   // 🔎 Lookup (existiert E-Mail?)
   const lookup = async (email) => {
     try {
-      const data = await $fetch(`${apiBase}/auth/check-email`, {
+      const data = await $fetch(`${apiBase}/v1/auth/check-email`, {
         method: 'POST',
         body: { email },
         credentials: 'include',
@@ -25,7 +25,7 @@ export const useAuth = () => {
 
   // 🔐 Login – Server setzt HttpOnly-Cookie
   const login = async ({ email, password }) => {
-    await $fetch(`${apiBase}/auth/login`, {
+    await $fetch(`${apiBase}/v1/auth/login`, {
       method: 'POST',
       body: { email, password },
       credentials: 'include',
@@ -37,7 +37,7 @@ export const useAuth = () => {
 
   // 🆕 Register
   const register = async ({ email, password, firstName, lastName }) => {
-    await $fetch(`${apiBase}/auth/register`, {
+    await $fetch(`${apiBase}/v1/auth/register`, {
       method: 'POST',
       body: { email, password, firstName, lastName },
       credentials: 'include',
@@ -50,7 +50,7 @@ export const useAuth = () => {
   // 🚪 Logout
   const logout = async () => {
     try {
-      await $fetch(`${apiBase}/auth/logout`, {
+      await $fetch(`${apiBase}/v1/auth/logout`, {
         method: 'POST',
         credentials: 'include',
         headers: ssrHeaders(),
@@ -64,7 +64,7 @@ export const useAuth = () => {
   // 👤 Me
   const fetchUser = async () => {
     try {
-      const data = await $fetch(`${apiBase}/auth/me`, {
+      const data = await $fetch(`${apiBase}/v1/auth/me`, {
         method: 'GET',
         credentials: 'include',
         headers: ssrHeaders(),

@@ -1,12 +1,8 @@
 <!-- pages/event/[slug].vue -->
 <template>
-  <!-- 404: wirklich nur dieser Text -->
   <div v-if="is404">Event existiert nicht.</div>
-
-  <!-- Andere Fehler kurz halten -->
   <div v-else-if="isError">Fehler beim Laden.</div>
 
-  <!-- Nur rendern, wenn echte Daten vorhanden sind -->
   <div v-else-if="hasData" class="container py-4">
     <!-- Header -->
     <div class="row g-3 align-items-center mb-3">
@@ -81,12 +77,12 @@
               </div>
             </div>
 
-            <!-- Ansicht B: Sitzplan -->
+            <!-- Ansicht B: Sitzplan (UI-only) -->
             <div v-else class="mt-3">
-              <SeatMapPicker v-if="hasSeatmap" :seatmap="seatmap" v-model:selected="selectedSeats" />
+              <SeatMapPicker v-if="hasSeatmap" :seatmap="uiSeatmap" v-model:selected="selectedSeats" />
               <div v-else class="text-muted">Kein Sitzplan verfügbar.</div>
               <div class="small text-muted mt-2">
-                Ausgewählt: {{ selectedSeats.length }} Platz{{ selectedSeats.length===1?'':'e' }}
+                Ausgewählt: {{ selectedSeats.length }} Platz{{ selectedSeats.length===1?'':'e' }} – Hinweis: Sitzplätze werden aktuell noch nicht im Warenkorb reserviert.
               </div>
             </div>
           </div>
@@ -136,7 +132,7 @@
             <button class="btn btn-primary w-100 mt-3" :disabled="totalQty===0" @click="goCheckout">
               <i class="bi bi-bag-plus"></i> In den Warenkorb
             </button>
-            <div class="small text-muted mt-2">Deine Auswahl wird im nächsten Schritt 15 Min. reserviert.</div>
+            <div class="small text-muted mt-2">Deine Auswahl wird im nächsten Schritt reserviert (Login erforderlich).</div>
           </div>
         </div>
       </div>
@@ -153,17 +149,11 @@ import { useApi } from '~/composables/useApi'
 const route = useRoute()
 const router = useRouter()
 const slug = String(route.params.slug || '')
-const { get, post } = useApi() // post wird verwendet!
+const { get, post } = useApi()
 
-// Status aus verschiedenen Fehler-Formaten ableiten
 function toStatus (e) {
   return Number(
-    e?.status ??
-    e?.statusCode ??
-    e?.response?.status ??
-    e?.cause?.statusCode ??
-    e?.data?.status ??
-    0
+    e?.status ?? e?.statusCode ?? e?.response?.status ?? e?.cause?.statusCode ?? e?.data?.status ?? 0
   )
 }
 
@@ -171,7 +161,7 @@ const { data: state } = await useAsyncData(
   `event-bundle:${slug}`,
   async () => {
     try {
-      const res = await get(`/events/${slug}/bundle`)
+      const res = await get(`/v1/public/events/${slug}/bundle`)
       if (res?.error) {
         const status = toStatus(res.error) || Number(res?.status || 0) || 500
         if (status === 404) return { status: 404 }
@@ -190,15 +180,12 @@ const { data: state } = await useAsyncData(
   { server: true, watch: false }
 )
 
-// Flags
 const is404  = computed(() => state.value?.status === 404)
 const hasData= computed(() => state.value?.status === 200 && !!state.value?.data?.event)
 const isError= computed(() => !!state.value && state.value.status !== 200 && state.value.status !== 404)
 
-// Daten
 const ev = computed(() => state.value?.data?.event)
 
-// Datumsteile
 function dparts (iso) {
   const d = iso ? new Date(iso) : null
   if (!d || isNaN(d.getTime())) return { date: '—', time: '—', weekday: '—' }
@@ -210,30 +197,21 @@ function dparts (iso) {
 }
 const dp = computed(() => dparts(ev.value?.date))
 
-// Tickets
-const tiers = computed(() =>
-  (state.value?.data?.tickets || []).map(t => ({
+const tiers = computed(() => {
+  const fromBundle = (state.value?.data?.tickets || [])
+  const fromEvent  = (state.value?.data?.event?.ticket_categories || [])
+  const raw = fromBundle.length ? fromBundle : fromEvent
+  return raw.map(t => ({
     id: t.id,
     name: t.name || t.code || 'Kategorie',
     price_eur: Number(t.price ?? 0),
     stock: t.stock ?? null
   }))
-)
-
-// Back-Link: bevorzugt Tour, sonst Startseite
-const backLink = computed(() => {
-  const tslug = ev.value?.tour_slug
-  if (tslug) return `/tour/${tslug}`
-  return '/'
 })
-function handleBackClick(e) {
-  if (!backLink.value || backLink.value === '#') {
-    e.preventDefault()
-    router.back()
-  }
-}
 
-// Mengen/Seatmap/UI
+const backLink = computed(() => ev.value?.tour_slug ? `/v1/tour/${ev.value.tour_slug}` : '/')
+function handleBackClick(e) { if (!backLink.value || backLink.value === '#') { e.preventDefault(); router.back() } }
+
 const quantities = reactive({})
 watchEffect(() => {
   const init = {}
@@ -241,8 +219,42 @@ watchEffect(() => {
   Object.assign(quantities, init)
 })
 
-const seatmap = computed(() => state.value?.data?.seatmap?.layout || null)
-const hasSeatmap = computed(() => !!(state.value?.data?.seatmap?.enabled && seatmap.value))
+const uiSeatmap = computed(() => {
+  const sm = state.value?.data?.seatmap
+  if (!sm?.enabled) return null
+
+  const layout = sm.layout || {}
+  const ticketsRaw = (state.value?.data?.tickets || state.value?.data?.event?.ticket_categories || [])
+  const categories = ticketsRaw.map((t, i) => ({
+    id: t.id,
+    name: t.name || t.code || `Kategorie ${i+1}`,
+    price_eur: Number(t.price ?? 0),
+    color: autoColor(i)
+  }))
+
+  if (layout?.plan?.zones) return { categories, plan: layout.plan }
+
+  const blocks = Array.isArray(layout.blocks) ? layout.blocks : []
+  const zones = blocks.map((b, bi) => {
+    const rows = []
+    const rowCount = Number(b.rows ?? 0)
+    const perRow  = Number(b.seats_per_row ?? 0)
+    const catId   = categories[0]?.id
+    for (let r = 0; r < rowCount; r++) {
+      const seats = []
+      for (let s = 0; s < perRow; s++) seats.push({ id: `${b.id||`B${bi+1}`}-R${r+1}-S${s+1}`, n: s+1, status: 'free', catId })
+      rows.push({ index: r+1, seats })
+    }
+    return { id: b.id || `Block ${bi+1}`, name: b.id || `Block ${bi+1}`, catId, rows }
+  })
+
+  return { categories, plan: { zones } }
+})
+
+const hasSeatmap = computed(() => {
+  const plan = uiSeatmap.value?.plan
+  return !!(plan?.zones?.some(z => (z.rows || []).some(r => (r.seats || []).length)))
+})
 const viewMode = ref('tickets')
 watchEffect(() => { viewMode.value = hasSeatmap.value ? 'seatmap' : 'tickets' })
 const selectedSeats = ref([])
@@ -250,19 +262,16 @@ const selectedSeats = ref([])
 const wantAddon = ref(false)
 const email = ref('')
 
-// Preise/Cart
+// Preise/Cart (nur GA – Seats noch nicht im Backend)
 const totalGA = computed(() =>
   tiers.value.reduce((sum, t) => sum + (quantities[t.id] || 0) * (t.price_eur || 0), 0)
 )
-const totalSeats = computed(() =>
-  selectedSeats.value.reduce((sum, s) => sum + (s.price || 0), 0)
-)
 const addonFee = computed(() => wantAddon.value && totalGA.value > 0 ? 25 : 0)
-const subtotal = computed(() => totalGA.value + totalSeats.value)
+const subtotal = computed(() => totalGA.value)
 const serviceFee = computed(() => Math.max(0.29, subtotal.value * 0.08))
 const total = computed(() => subtotal.value + addonFee.value + serviceFee.value)
 const totalQty = computed(() =>
-  Object.values(quantities).reduce((a,b)=>a+(b||0),0) + selectedSeats.value.length
+  Object.values(quantities).reduce((a,b)=>a+(b||0),0)
 )
 const cartLines = computed(() => {
   const lines = []
@@ -270,60 +279,53 @@ const cartLines = computed(() => {
     const q = quantities[t.id] || 0
     if (q > 0) lines.push({ key:`ga-${t.id}`, label: `${t.name} × ${q}`, total: q * (t.price_eur || 0) })
   })
-  if (selectedSeats.value.length) {
-    const byCat = selectedSeats.value.reduce((acc, s) => {
-      const key = s.catId || 'seat'
-      acc[key] ??= { qty:0, total:0, label: s.catName || 'Sitzplatz' }
-      acc[key].qty += 1
-      acc[key].total += s.price || 0
-      return acc
-    }, {})
-    Object.values(byCat).forEach(x => {
-      lines.push({ key:`seat-${x.label}`, label: `${x.label} × ${x.qty}`, total: x.total })
-    })
-  }
   return lines
 })
 
-function fmt (n) {
-  const num = Number.isFinite(n) ? n : 0
-  return num.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+function fmt (n) { const num = Number.isFinite(n) ? n : 0; return num.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }) }
+function autoColor(i) { const p = ['#4e79a7','#59a14f','#f28e2b','#e15759','#edc948','#b07aa1','#76b7b2']; return p[i % p.length] }
+
+function handleAuthRedirect () {
+  const ret = encodeURIComponent(`/event/${slug}`)
+  router.push(`/auth/lookup?redirect=${ret}`)
 }
 
 async function goCheckout () {
-  // 1) Items aus GA
   const items = Object.entries(quantities)
-    .map(([catId, qty]) => ({ category_id: Number(catId), quantity: Number(qty) }))
+    .map(([ticket_category_id, quantity]) => ({
+      ticket_category_id: Number(ticket_category_id),
+      quantity: Number(quantity)
+    }))
     .filter(x => x.quantity > 0)
 
-  // 2) Seats (falls Seatmap genutzt)
-  const seat_ids = selectedSeats.value.map(s => Number(s.id)).filter(Boolean)
+  if (!items.length) return
 
-  if (!items.length && !seat_ids.length) return
-
-  // WICHTIG: Nur nicht-leere Felder mitsenden (sonst 422 wegen min_length=1)
-  const payload = {
-    event_id: ev.value.id,
-    buyer_email: email.value || null,
-    ...(items.length ? { items } : {}),
-    ...(seat_ids.length ? { seat_ids } : {})
-  }
-
-  const res = await post('/orders', payload)
-  if (res?.error) {
-    alert(res.error?.message || 'Reservierung fehlgeschlagen')
+  // 1) Cart anlegen
+  const created = await post('/v1/carts', {})
+  if (created?.error) {
+    const st = toStatus(created.error)
+    if (st === 401 || st === 403) return handleAuthRedirect()
+    alert(created.error?.message || 'Warenkorb konnte nicht erstellt werden.')
     return
   }
+  const cartId = created.data?.cart_id ?? created.cart_id
+  if (!cartId) { alert('Warenkorb-ID fehlt.'); return }
 
-  // DEV-Only: Falls Proxy Set-Cookie killt, legen wir es sichtbar (nicht-HttpOnly) ab.
+  // 2) GA-Items hinzufügen
+  for (const it of items) {
+    const r = await post(`/v1/carts/${cartId}/items`, it)
+    if (r?.error) { alert(r.error?.message || 'Artikel konnte nicht hinzugefügt werden.'); return }
+  }
+
+  // 3) Buyer-Email merken
   try {
-    if (process.dev && res?.data?.access_token) {
-      const t = useCookie('ORDER_TOKEN', { sameSite: 'lax', path: '/' })
-      if (!t.value) t.value = res.data.access_token
+    if (email.value) {
+      const t = useCookie('BUYER_EMAIL', { sameSite: 'lax', path: '/' })
+      t.value = email.value
     }
-  } catch {/* ignore */}
+  } catch {}
 
-  const { order_id } = res.data
-  await navigateTo(`/cart/${order_id}`)
+  // 4) Weiter zum Warenkorb
+  router.push(`/cart/${cartId}`)
 }
 </script>

@@ -1,3 +1,4 @@
+<!-- pages/orders/cancel.vue -->
 <template>
   <div class="container py-5">
     <div class="text-center">

@@ -115,8 +115,10 @@ const submit = async () => {
   error.value = ''
   loading.value = true
   try {
-    await login({ email, password: password.value })
-    await router.push(safeRedirect) // "/" oder z. B. "/business"
+    const res = await login({ email, password: password.value })
+    console.log('login ok', res)
+    await router.push(safeRedirect)
+    console.log('navigated to', safeRedirect)
   } catch (err) {
     error.value = err?.message || 'Login fehlgeschlagen.'
   } finally {
