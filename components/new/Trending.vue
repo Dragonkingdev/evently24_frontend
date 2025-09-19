@@ -7,7 +7,7 @@ const region = useState('region')
 
 // API
 const api = useApi()
-const EVENTS_PATH = '/v2/public/events'
+const EVENTS_PATH = '/v1/public/events'
 
 // ---------- Helpers (aus deinem Index, leicht gekürzt) ----------
 const toArray = (x) => Array.isArray(x) ? x : (x?.items || x?.results || x?.data || x?.events || [])
