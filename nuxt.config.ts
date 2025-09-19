@@ -1,17 +1,19 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   css: [
-    'bootstrap/dist/css/bootstrap.min.css'
+    'bootstrap/dist/css/bootstrap.min.css',
+    '~/public/css/main.css'
   ],
    app: {
     head: {
-      title: 'Evently - Ticket System',
+      title: 'Evently – Event & Tickets in deiner Region',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Ticket System für Jedermann' }
+        { name: 'description', content: 'Entdecke Events, Festivals & Locations in deiner Region. Tickets sichern – direkt über Fountain.' }
       ],
         link: [
-          { rel: 'icon', type: 'image/png', href: '/favicon.png' }
+          { rel: 'icon', type: 'image/png', href: '/favicon.png' },
+          { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css' }
       ]
     }
   },
