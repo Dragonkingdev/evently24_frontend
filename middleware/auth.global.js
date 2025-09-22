@@ -5,7 +5,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // Seiten-Flags
   const needsAuth = to.meta.auth === true
-    || to.path.startsWith('/dashboard')
+    || to.path.startsWith('/w/')
     || to.path.startsWith('/business')
     || to.path.startsWith('/checkout')
     

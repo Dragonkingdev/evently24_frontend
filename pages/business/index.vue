@@ -1,16 +1,16 @@
+<!-- pages/business/index.vue -->
 <template>
-    <h1>Business Dashboard</h1>
+  <div>
+    <div class="mb-3">
+      <h4 class="mb-1">Deine Workspaces</h4>
+      <div class="text-muted">Wähle einen Workspace oder lege einen neuen an.</div>
+    </div>
+    <div class="card p-3">
+      <WorkspaceDropdown :autoRedirectOnBusiness="true" />
+    </div>
+  </div>
 </template>
 
 <script setup>
-definePageMeta({ layout: 'businesslayout', auth: true })
+import WorkspaceDropdown from '~/components/business/WorkspaceDropdown.vue'
 </script>
-
-<style scoped>
-.page-header {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: .5rem;
-  padding: .75rem 1rem;
-}
-</style>

@@ -1,4 +1,4 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
+// nuxt.config.ts
 export default defineNuxtConfig({
   css: [
     'bootstrap/dist/css/bootstrap.min.css',
@@ -21,6 +21,11 @@ export default defineNuxtConfig({
     { src: '~/plugins/bootstrap.client', mode: 'client' },
     { src: '~/plugins/theme.client', mode: 'client' },
   ],
+  imports: {
+    dirs: [
+      'composables',
+    ]
+  },
   nitro: {
     // PROD & DEV: RouteRules-Proxy (funktioniert in beiden Umgebungen)
     routeRules: {

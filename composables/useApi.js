@@ -14,33 +14,39 @@ export function useApi () {
   }
 
   async function request (method, path, opts = {}) {
-    try {
-      const data = await $fetch(path, {
-        method,
-        baseURL,
-        headers: { ...headers(), ...(opts.headers || {}) },
-        params: opts.params,
-        body: opts.body,
-        credentials: 'include'
-      })
-      // optionales Dev-Logging
-      if (process.dev && import.meta.client) {
-        console.debug(`[API ${method}] ${baseURL}${path}`, { params: opts.params, body: opts.body })
+    const shouldThrow = opts.throw === true
+    const maxRetries = opts.retries ?? 0
+    let attempt = 0, lastErr = null
+    while (attempt <= maxRetries) {
+      try {
+        const payload = await $fetch(path, {
+            method, 
+            baseURL, 
+            headers: { ...headers(), ...(opts.headers||{}) },
+            params: opts.params, 
+            body: opts.body, 
+            credentials: 'include',
+            timeout: opts.timeout ?? 15000
+          })
+        return { data: payload, error: null }
+      } catch (error) {
+        lastErr = error
+        if (shouldThrow) {
+          throw error
+        }
+        if (attempt++ >= maxRetries) break
+        await new Promise(r => setTimeout(r, 300 * attempt))
       }
-      return { data, error: null }
-    } catch (error) {
-      if (process.dev && import.meta.client) {
-        console.error(`[API ${method} ERROR] ${baseURL}${path}`, error)
-      }
-      return { data: null, error }
     }
+    return { data: null, error: lastErr }
   }
 
   const get  = (path, params, opts={}) => request('GET', path, { ...opts, params })
   const post = (path, body,   opts={}) => request('POST', path, { ...opts, body })
   const put  = (path, body,   opts={}) => request('PUT', path, { ...opts, body })
   const del  = (path, params, opts={}) => request('DELETE', path, { ...opts, params })
+  const patch = (path, body, opts={}) => request('PATCH', path, { ...opts, body })
   const $    = (path, opts={}) => $fetch(path, { baseURL, headers: headers(), credentials: 'include', ...opts })
 
-  return { $, get, post, put, del }
+  return { $, get, post, put, del, patch }
 }
