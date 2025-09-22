@@ -18,31 +18,40 @@
 
     <div v-if="pending" class="card p-3 text-muted">Lädt…</div>
 
-    <div v-else>
-      <EventForm :model-value="ev" edit @submit="onSave">
-        <template #extra>
-          <div class="ms-auto d-flex align-items-center gap-2">
-            <span class="text-muted small">Status: <strong>{{ ev?.status }}</strong></span>
-            <button v-if="ev?.status==='draft'" class="btn btn-sm btn-success" @click.prevent="onPublish">
-              <i class="bi bi-megaphone"></i> Veröffentlichen
-            </button>
-            <button v-else class="btn btn-sm btn-warning" @click.prevent="onUnpublish">
-              <i class="bi bi-eye-slash"></i> Depublizieren
-            </button>
-            <button class="btn btn-sm btn-outline-danger" @click.prevent="onDelete">
-              <i class="bi bi-trash"></i> Löschen
-            </button>
-          </div>
-        </template>
-      </EventForm>
+    <div v-else class="row g-4">
+      <!-- Sidebar: mobil zuerst, Desktop rechts -->
+      <div class="col-12 col-lg-4 order-1 order-lg-2">
+        <EventSummaryCard :wid="wid" :event-id="eventId" :ev="ev" />
+      </div>
 
-      <div v-if="flash" class="alert mt-3" :class="flash.variant">{{ flash.msg }}</div>
+      <!-- Hauptinhalt links -->
+      <div class="col-12 col-lg-8 order-2 order-lg-1">
+        <EventForm :model-value="ev" edit @submit="onSave">
+          <template #extra>
+            <div class="ms-auto d-flex align-items-center gap-2">
+              <span class="text-muted small">Status: <strong>{{ ev?.status }}</strong></span>
+              <button v-if="ev?.status==='draft'" class="btn btn-sm btn-success" @click.prevent="onPublish">
+                <i class="bi bi-megaphone"></i> Veröffentlichen
+              </button>
+              <button v-else class="btn btn-sm btn-warning" @click.prevent="onUnpublish">
+                <i class="bi bi-eye-slash"></i> Depublizieren
+              </button>
+              <button class="btn btn-sm btn-outline-danger" @click.prevent="onDelete">
+                <i class="bi bi-trash"></i> Löschen
+              </button>
+            </div>
+          </template>
+        </EventForm>
+
+        <div v-if="flash" class="alert mt-3" :class="flash.variant">{{ flash.msg }}</div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import EventForm from '~/components/business/workspaces/events/EventForm.vue'
+import EventSummaryCard from '~/components/business/workspaces/events/EventSummaryCard.vue'
 
 const route = useRoute()
 const wid = Number(route.params.wid)

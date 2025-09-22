@@ -11,15 +11,24 @@
     </div>
 
     <div v-if="pending" class="card p-3 text-muted">Lädt…</div>
-    <div v-else>
-      <SeatmapManager :event-id="eventId" :seatmap-id="event?.seatmap_id || null" />
+
+    <div v-else class="row g-4">
+      <!-- Sidebar: mobil zuerst, Desktop rechts -->
+      <div class="col-12 col-lg-4 order-1 order-lg-2">
+        <EventSummaryCard :wid="wid" :event-id="eventId" :ev="event" />
+      </div>
+
+      <!-- Hauptinhalt -->
+      <div class="col-12 col-lg-8 order-2 order-lg-1">
+        <SeatmapManager :event-id="eventId" :seatmap-id="event?.seatmap_id || null" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-definePageMeta({ layout: 'businesslayout', auth: true })
 import SeatmapManager from '~/components/business/workspaces/events/SeatmapManager.vue'
+import EventSummaryCard from '~/components/business/workspaces/events/EventSummaryCard.vue'
 
 const route = useRoute()
 const wid = Number(route.params.wid)
@@ -27,7 +36,6 @@ const eventId = Number(route.params.event_id)
 const headers = useRequestHeaders(['cookie'])
 const apiBase = useRuntimeConfig().public.apiBaseUrl
 
-// Event holen (wegen seatmap_id) – SSR
 const fetcher = () => $fetch(`${apiBase}/v1/workspace/${wid}/events/${eventId}`, {
   headers, credentials: 'include', cache: 'no-store'
 })

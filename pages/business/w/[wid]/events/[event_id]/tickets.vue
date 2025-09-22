@@ -10,13 +10,24 @@
       </div>
     </div>
 
-    <TicketsManager :event-id="eventId" />
+    <div class="row g-4">
+      <!-- Sidebar: mobil zuerst, Desktop rechts -->
+      <div class="col-12 col-lg-4 order-1 order-lg-2">
+        <EventSummaryCard :wid="wid" :event-id="eventId" />
+      </div>
+
+      <!-- Hauptinhalt -->
+      <div class="col-12 col-lg-8 order-2 order-lg-1">
+        <TicketsManager :event-id="eventId" />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-definePageMeta({ layout: 'businesslayout', auth: true })
 import TicketsManager from '~/components/business/workspaces/events/TicketsManager.vue'
+import EventSummaryCard from '~/components/business/workspaces/events/EventSummaryCard.vue'
+
 const route = useRoute()
 const wid = Number(route.params.wid)
 const eventId = Number(route.params.event_id)
