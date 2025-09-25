@@ -37,7 +37,7 @@ export const useWorkspaceApi = () => {
   }
 
   // Optional weitere Workspace-Actions
-  const patchWorkspace = (body) => patch(`/v1/workspace/${wid.value}`, body) // PATCH
+  const patchWorkspace = (body) => patch(`/v1/workspace/${wid.value}`, body)
   const archiveWorkspace = () => post(`/v1/workspace/${wid.value}/archive`)
   const restoreWorkspace = () => post(`/v1/workspace/${wid.value}/restore`)
   const deleteWorkspace = () => del(`/v1/workspace/${wid.value}`)
@@ -61,11 +61,11 @@ export const useWorkspaceApi = () => {
   const acceptInvite = (body) =>
     post(`/v1/workspace/${wid.value}/invites/accept`, body)
 
-  // --- Events (GA)
+  // --- Events (GA & Reserved) ---
   const listEvents  = (q, active_only=true) => get(`/v1/workspace/${wid.value}/events`, { q, active_only })
   const getEvent    = (eventId) => get(`/v1/workspace/${wid.value}/events/${eventId}`)
   const createEvent = (body) => post(`/v1/workspace/${wid.value}/events`, body)
-  const patchEvent  = (eventId, body) => patch(`/v1/workspace/${wid.value}/events/${eventId}`, body) // <-- NEU (PATCH)
+  const patchEvent  = (eventId, body) => patch(`/v1/workspace/${wid.value}/events/${eventId}`, body)
   const deleteEvent = (eventId) => del(`/v1/workspace/${wid.value}/events/${eventId}`)
   const cloneEvent  = (eventId, body={}) => post(`/v1/workspace/${wid.value}/events/${eventId}:clone`, body)
   const archiveEvent = (eventId, archived=true) =>
@@ -75,9 +75,19 @@ export const useWorkspaceApi = () => {
   const publishEvent = (eventId) =>
     post(`/v1/workspace/${wid.value}/events/${eventId}/publish`)
   const unpublishEvent = (eventId) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/unpublish`) // <-- NEU
+    post(`/v1/workspace/${wid.value}/events/${eventId}/unpublish`)
 
-  // Ticketing (GA)
+  // Convenience: location_name
+  const withLocationName = (payload) => {
+    const p = { ...(payload || {}) }
+    if (typeof p.location === 'string' && p.location.trim()) {
+      p.location_name = p.location.trim()
+      delete p.location
+    }
+    return p
+  }
+
+  // --- Ticketing (GA + Reserved shared) ---
   const addTicketCategories = (eventId, categories) =>
     post(`/v1/workspace/${wid.value}/events/${eventId}/ticket-categories`, categories)
   const listTicketCategories = (eventId) =>
@@ -98,19 +108,21 @@ export const useWorkspaceApi = () => {
   const createEventWithTickets = (body) =>
     post(`/v1/workspace/${wid.value}/events:sell`, body)
 
-  // Reserved seating
-  const getSeatingAssignments = (eventId) =>
-    get(`/v1/workspace/${wid.value}/events/${eventId}/seating/assignments`)
-  const setSeatingAssignments = (eventId, body) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/seating/assignments`, body)
-  const mintFromAssignments = (eventId) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/seating/mint`)
-  const publishReservedEvent = (eventId) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/seating/publish`)
-  const seatingAutoAssign = (eventId, body) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/seating/auto-assign`, body)
+  // --- Holds (nur Seatmap in UI genutzt) ---
+  const seatsStatus = (eventId, labels) =>
+    get(`/v1/workspace/${wid.value}/events/${eventId}/admin/seats`, { label: labels })
+  const createSeatHold = (eventId, body) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}/admin/holds/seats`, body)
+  const releaseSeatHold = (eventId, cartId, body={}) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}/admin/holds/${cartId}:release-seats`, body)
+  const issueFromSeatHold = (eventId, cartId, body={}) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}/admin/holds/${cartId}:issue-seats`, body)
 
-  // Seatmaps
+  // --- Ticket-Admin: Seat Swap (Backend-Route vorhanden) ---
+  const swapSeat = (eventId, body) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}/tickets:swap-seat`, body)
+
+  // --- Seatmaps
   const listSeatmaps = (q) => get(`/v1/workspace/${wid.value}/seatmaps`, { q })
   const createSeatmap = (body) => post(`/v1/workspace/${wid.value}/seatmaps`, body)
   const getSeatmap = (seatmapId) => get(`/v1/workspace/${wid.value}/seatmaps/${seatmapId}`)
@@ -120,6 +132,15 @@ export const useWorkspaceApi = () => {
     post(`/v1/workspace/${wid.value}/seatmaps/${seatmapId}/layout/generate?force=${force}`, body)
   const seatmapLayoutSummary = (seatmapId) =>
     get(`/v1/workspace/${wid.value}/seatmaps/${seatmapId}/layout/summary`)
+
+  // Canvas Layout
+  const setSeatmapLayoutCanvas = (seatmapId, body, force=false) =>
+    post(`/v1/workspace/${wid.value}/seatmaps/${seatmapId}/layout/canvas?force=${force}`, body)
+  const getSeatmapLayoutCanvas = (seatmapId) =>
+    get(`/v1/workspace/${wid.value}/seatmaps/${seatmapId}`).then(({ data }) => ({
+      id: data?.id,
+      canvas: data?.layout?.canvas || null
+    }))
 
   // --- Calendar / Series & Occurrences ---
   const listSeries = (q, kind) => get(`/v1/workspace/${wid.value}/calendar/series`, { q, kind })
@@ -172,21 +193,24 @@ export const useWorkspaceApi = () => {
     listMembers, addMember, updateMemberRole, removeMember, leaveWorkspace,
     listInvites, createInvite, resendInvite, revokeInvite, acceptInvite,
 
-    // events GA
+    // events
     listEvents, getEvent, createEvent, patchEvent, deleteEvent,
     cloneEvent, archiveEvent, saleReadiness, publishEvent, unpublishEvent,
 
-    // ticketing GA
+    // ticketing
     addTicketCategories, listTicketCategories, patchTicketCategory, deleteTicketCategory,
     bulkUpsertCategories, mintTickets, listTickets, ticketsSummary, createEventWithTickets,
 
-    // reserved seating
-    getSeatingAssignments, setSeatingAssignments, mintFromAssignments,
-    publishReservedEvent, seatingAutoAssign,
+    // holds (Seatmap)
+    seatsStatus, createSeatHold, releaseSeatHold, issueFromSeatHold,
+
+    // ticket admin
+    swapSeat,
 
     // seatmaps
     listSeatmaps, createSeatmap, getSeatmap, patchSeatmap,
     setSeatmapLayout, generateSeatmapLayout, seatmapLayoutSummary,
+    setSeatmapLayoutCanvas, getSeatmapLayoutCanvas,
 
     // series/occurrences
     listSeries, createSeries, getSeries, patchSeries, deleteSeries,

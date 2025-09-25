@@ -2,12 +2,12 @@
 <template>
   <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <strong>Seating Assignments</strong>
+      <strong>Reserved Seating</strong>
       <div class="btn-group">
-        <button class="btn btn-sm btn-outline-secondary" @click="load">
+        <button class="btn btn-sm btn-outline-secondary" @click="load" :title="t.load">
           <i class="bi bi-arrow-repeat"></i> Laden
         </button>
-        <button class="btn btn-sm btn-outline-primary" @click="save">
+        <button class="btn btn-sm btn-outline-primary" @click="save" :title="t.save">
           <i class="bi bi-save"></i> Speichern
         </button>
       </div>
@@ -19,24 +19,43 @@
         Für Seating brauchst du eine <strong>Seatmap ID</strong> am Event.
       </div>
 
+      <div class="alert alert-light border small d-flex gap-2">
+        <i class="bi bi-info-circle mt-1"></i>
+        <div>
+          <strong>Zuweisungen (Kategorie → Sitz-Labels)</strong><br>
+          Lege fest, welche Sitze zu welcher Kategorie gehören.
+          Beim „Tickets erzeugen“ werden für diese Sitzlabels konkrete Tickets erstellt (Status: noch nicht verkauft).
+        </div>
+      </div>
+
       <p class="small text-muted mb-1">
-        Direkte Zuweisungen (Kategorie → Seat-Labels) als JSON:
+        JSON-Struktur:
         <code>{ "&lt;category_id&gt;": ["A-1","A-2", ...] }</code>
       </p>
       <textarea class="form-control" rows="8" v-model="jsonText"></textarea>
 
       <div class="mt-3 d-flex gap-2 flex-wrap">
-        <button class="btn btn-outline-primary" @click="mint">
-          <i class="bi bi-coin"></i> Tickets aus Zuweisungen minten
+        <button class="btn btn-outline-primary" @click="mint" :title="t.generateFromAssignments">
+          <i class="bi bi-coin"></i> Tickets aus Zuweisungen erzeugen
         </button>
-        <button class="btn btn-success" @click="publishReserved">
+        <button class="btn btn-success" @click="publishReserved" :title="t.publishReserved">
           <i class="bi bi-megaphone"></i> Reserved-Seating Event veröffentlichen
         </button>
       </div>
 
+      <div class="alert alert-light border small mt-3">
+        <i class="bi bi-lightbulb"></i>
+        <strong>Admin-Holds:</strong> Du kannst einzelne Sitze befristet reservieren (ohne Zahlung),
+        z.&nbsp;B. für Partner oder Presse. Das geht in deiner Sitzplatz-Hold-Verwaltung.
+      </div>
+
       <hr class="my-4"/>
 
-      <h6 class="mb-2">Auto-Assign (Zone → Kategorie)</h6>
+      <h6 class="mb-2">Auto-Assign (Zonen → Kategorien)</h6>
+      <p class="small text-muted">
+        Weist Sitze automatisch zu: ordnet alle Sitze einer Zone der gewünschten Kategorie zu.
+        Optional kannst du pro Zone Reihen einschränken.
+      </p>
       <div class="row g-3">
         <div class="col-md-6">
           <label class="form-label">Mapping (zone_key → category_id)</label>
@@ -51,9 +70,9 @@
         <div class="col-md-12 d-flex align-items-center gap-3">
           <div class="form-check">
             <input id="aa-replace" class="form-check-input" type="checkbox" v-model="autoAssign.replace">
-            <label for="aa-replace" class="form-check-label">Replace (vorherige Zuweisungen überschreiben)</label>
+            <label for="aa-replace" class="form-check-label">Vorherige Zuweisungen überschreiben</label>
           </div>
-          <button class="btn btn-outline-secondary" @click="doAutoAssign">
+          <button class="btn btn-outline-secondary" @click="doAutoAssign" :title="t.autoAssign">
             <i class="bi bi-magic"></i> Auto-Assign ausführen
           </button>
         </div>
@@ -73,6 +92,14 @@ const {
   getSeatingAssignments, setSeatingAssignments,
   mintFromAssignments, publishReservedEvent, seatingAutoAssign
 } = useWorkspaceApi()
+
+const t = {
+  load: 'Aktuelle Zuweisungen laden',
+  save: 'Zuweisungen speichern',
+  generateFromAssignments: 'Erzeugt konkrete Tickets für alle zugewiesenen Sitzlabels',
+  publishReserved: 'Event mit Sitzplatzverkauf veröffentlichen',
+  autoAssign: 'Zonen schnell Kategorien zuweisen (optional mit Reihenfilter)'
+}
 
 const jsonText = ref('{\n  "101": ["A-1","A-2"],\n  "102": ["B-1"]\n}')
 const debug = ref(null)
@@ -94,8 +121,8 @@ async function save(){
 }
 async function mint(){
   const { data, error } = await mintFromAssignments(props.eventId)
-  if (error) return alert('Minting fehlgeschlagen.')
-  debug.value = { mint: data }
+  if (error) return alert('Erzeugen fehlgeschlagen.')
+  debug.value = { erzeugt: data }
 }
 async function publishReserved(){
   const { data, error } = await publishReservedEvent(props.eventId)

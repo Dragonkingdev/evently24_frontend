@@ -8,24 +8,27 @@
       </NuxtLink>
     </div>
 
-    <EventForm @submit="submit" />
+    <EventCreateWizard :wid="wid" :api="api" @submit="submit" />
   </div>
 </template>
 
 <script setup>
-definePageMeta({ layout: 'businesslayout', auth: true })
-import EventForm from '~/components/business/workspaces/events/EventForm.vue'
+import EventCreateWizard from '~/components/business/workspaces/events/EventCreateWizard.vue'
 
 const route = useRoute()
 const wid = Number(route.params.wid)
-const { createEvent } = useWorkspaceApi()
+const api = useWorkspaceApi() // wir reichen die Methoden in den Wizard weiter
 
 async function submit(body){
-  const { data, error } = await createEvent(body) // POST /workspace/{wid}/events
-  if (error) {
+  // POST /workspace/{wid}/events – inkl. location_name und evtl. seatmap_id
+  const { createEvent } = api
+  const { data, error } = await createEvent(body)
+  if (error || !data?.id) {
     console.error(error)
-    return alert('Konnte Event nicht anlegen.')
+    return alert(error?.data?.detail || 'Konnte Event nicht anlegen.')
   }
+  // Bei GA (Kontingente) kannst du später Kategorien hinzufügen
+  // Bei Reserved ist seatmap_id bereits gesetzt (im Wizard)
   navigateTo(`/business/w/${wid}/events/${data.id}`)
 }
 </script>

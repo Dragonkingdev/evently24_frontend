@@ -7,12 +7,6 @@
         <NuxtLink :to="`/business/w/${wid}/events`" class="btn btn-outline-secondary">
           <i class="bi bi-arrow-left"></i> Zurück
         </NuxtLink>
-        <NuxtLink :to="`/business/w/${wid}/events/${eventId}/tickets`" class="btn btn-outline-primary">
-          <i class="bi bi-tags"></i> Tickets
-        </NuxtLink>
-        <NuxtLink :to="`/business/w/${wid}/events/${eventId}/seating`" class="btn btn-outline-primary">
-          <i class="bi bi-grid-3x3-gap"></i> Seating
-        </NuxtLink>
       </div>
     </div>
 
@@ -57,7 +51,7 @@ const route = useRoute()
 const wid = Number(route.params.wid)
 const eventId = Number(route.params.event_id)
 
-const { getEvent, patchEvent, publishEvent, unpublishEvent, deleteEvent, saleReadiness } = useWorkspaceApi()
+const { patchEvent, publishEvent, unpublishEvent, deleteEvent, saleReadiness } = useWorkspaceApi()
 const headers = useRequestHeaders(['cookie'])
 const apiBase = useRuntimeConfig().public.apiBaseUrl
 
@@ -87,6 +81,7 @@ function renderReadinessAlert(rd, prefix='Veröffentlichen nicht möglich:'){
 
 async function onSave (payload) {
   try {
+    // Hinweis: payload darf jetzt location_name (String) enthalten.
     await patchEvent(eventId, payload)
     await refresh()
     notify('Gespeichert.')
@@ -94,7 +89,7 @@ async function onSave (payload) {
     // Wenn auf "internal" gewechselt wurde, gleich die Readiness zeigen
     const changedToInternal =
       (payload?.listing_mode === 'internal') ||
-      (payload?.listing_mode === undefined && ev.value?.listing_mode === 'internal') // falls anderes Feld geändert
+      (payload?.listing_mode === undefined && ev.value?.listing_mode === 'internal')
     if (changedToInternal && ev.value?.status === 'draft') {
       const { data: rd } = await saleReadiness(eventId)
       if (!rd?.ok) {
@@ -103,7 +98,6 @@ async function onSave (payload) {
     }
   } catch (e) {
     console.error(e)
-    // Backend gibt meist { detail: '...' }
     const detail = e?.data?.detail || 'Speichern fehlgeschlagen.'
     notify(String(detail), 'alert-danger')
   }
@@ -124,8 +118,6 @@ async function onPublish () {
     }
   }
 }
-
-
 
 async function onUnpublish () {
   try {

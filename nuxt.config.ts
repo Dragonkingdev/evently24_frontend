@@ -4,7 +4,7 @@ export default defineNuxtConfig({
     'bootstrap/dist/css/bootstrap.min.css',
     '~/public/css/main.css'
   ],
-   app: {
+  app: {
     head: {
       title: 'Evently – Event & Tickets in deiner Region',
       meta: [
