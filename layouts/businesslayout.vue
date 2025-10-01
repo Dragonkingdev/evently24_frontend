@@ -4,12 +4,13 @@
     <BusinessSidebar :is-open="sidebarOpen" @close="sidebarOpen = false" />
     <div class="flex-grow-1 main-wrap">
       <BusinessNavbar @toggle-sidebar="toggleSidebar" />
-      <!-- 👇 wichtiger: eigene Klasse page-main -->
+      <!-- 👇 eigener Scroll-Container -->
       <main class="page-main container-fluid py-4">
         <slot />
       </main>
     </div>
 
+    <!-- Mobile-Backdrop -->
     <div
       v-if="sidebarOpen"
       class="offcanvas-backdrop d-md-none"
@@ -42,32 +43,44 @@ html, body, #__nuxt { height: 100%; }
 }
 
 /* Gesamtlayout */
-.business-layout{ min-height: 100vh; }
+.business-layout{
+  /* fix auf Viewport-Höhe, damit nur .page-main scrollt */
+  height: 100vh;
+  min-height: 100vh;
+}
 .main-wrap{
   background: var(--main-bg);
   display: flex;
   flex-direction: column;
-  min-width: 0;            /* wichtig für korrektes Overflow in Flex-Childs */
+  min-width: 0;
+  height: 100vh;           /* wichtig für internen Scroll der page-main */
 }
 
-/* 👇 Der Main-Bereich ist jetzt der Scroll-Container */
+/* 👇 Der Main-Bereich ist der Scroll-Container */
 .page-main{
   flex: 1 1 auto;
   overflow: auto;
-  min-height: 0;           /* verhindert, dass Flex-Childs größer als der Container werden */
+  min-height: 0;
   padding-left: 1rem;
   padding-right: 1rem;
 }
 
-/* Sidebar (dunkel, sticky, volle Höhe) */
+/* Sidebar: fix links, volle Höhe, NICHT scrollbar */
 .d-flex > .sidebar{
-  flex: 0 0 var(--sidebar-width);   /* Sidebar-Breite fixieren */
+  position: fixed;
+  left: 0; top: 0;
   width: var(--sidebar-width);
-  min-height: 100vh;
-  position: sticky; top: 0;
+  height: 100vh;
   background: var(--brand-bg);
   color: var(--brand-fg);
   box-shadow: inset -1px 0 0 rgba(0,0,0,.06);
+  overflow: hidden;        /* keine eigene Scrollbar */
+  z-index: 1050;           /* unter Header-Dropdowns okay */
+}
+
+/* Main nach rechts schieben (nur ≥ md) */
+@media (min-width: 768px){
+  .main-wrap{ margin-left: var(--sidebar-width); }
 }
 
 /* Sidebar Brand/Topblock */
@@ -92,7 +105,7 @@ html, body, #__nuxt { height: 100%; }
   text-decoration: none;
 }
 
-/* Active-Stil wie früher: weißer Chip auf dunklem BG */
+/* Active-Stil */
 .sidebar .nav-link.is-active,
 .sidebar .nav-link.router-link-active{
   background: #fff;
@@ -100,7 +113,7 @@ html, body, #__nuxt { height: 100%; }
   box-shadow: 0 1px 0 rgba(0,0,0,.05);
 }
 
-/* Header (hell, sticky) – bleibt wie neu, nur etwas „dash“-Feeling */
+/* Header (hell, „sticky“) – bleibt sichtbar, da nur page-main scrollt */
 header.sticky-top{
   background: #fff !important;
   border-bottom: 1px solid var(--border-soft);
@@ -110,10 +123,16 @@ header.sticky-top{
 /* Main Innenabstand wie altes dash-content */
 main.container-fluid{ padding-left: 1rem; padding-right: 1rem; }
 
-/* Mobile: Sidebar einklappbar – Hook bleibt fürs spätere JS */
+/* Mobile: Sidebar als Offcanvas (ein-/ausfahren) */
 @media (max-width: 768px){
-  .d-flex > .sidebar{ position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform .2s ease; z-index: 1050; }
-  .d-flex > .sidebar.is-open{ transform: translateX(0); }
+  .main-wrap{ margin-left: 0; } /* nicht nach rechts schieben */
+  .d-flex > .sidebar{
+    transform: translateX(-100%);
+    transition: transform .2s ease;
+  }
+  .d-flex > .sidebar.is-open{
+    transform: translateX(0);
+  }
   .business-layout{ gap: 0; }
 }
 </style>

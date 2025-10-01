@@ -5,6 +5,41 @@ export const useWorkspaceApi = () => {
   const { lastWid, setLast } = useLastWorkspace()
   const { get, post, del, put, patch } = useApi()
 
+  // --- zentraler Error-Parser: formatiert Backend-Fehler für die UI ---
+  const parseApiError = (err) => {
+    // Neues Backend-Schema: { errors: [ { code,message,field,fields?,meta? } ] }
+    const raw = err?.data ?? err?.response?.data ?? err
+    const arr = Array.isArray(raw?.errors) ? raw.errors
+      : Array.isArray(raw?.detail) ? raw.detail
+      : null
+    if (arr && arr.length) {
+      const first = arr[0] || {}
+      return {
+        code: first.code || 'error',
+        message: first.message || 'Es ist ein Fehler aufgetreten.',
+        field: first.field ?? null,
+        fields: Array.isArray(first.fields) ? first.fields
+          : (Array.isArray(first.meta?.fields) ? first.meta.fields : [])
+      }
+    }
+
+    // Fallbacks: gängige FastAPI-Formen oder plain string
+    const d = raw?.detail ?? raw
+    if (typeof d === 'string') {
+      return { code: 'error', message: d, field: null, fields: [] }
+    }
+    if (d && typeof d === 'object') {
+      return {
+        code: d.code || 'error',
+        message: d.message || 'Es ist ein Fehler aufgetreten.',
+        field: d.field ?? null,
+        fields: Array.isArray(d.fields) ? d.fields
+          : (Array.isArray(d.meta?.fields) ? d.meta.fields : [])
+      }
+    }
+    return { code: 'error', message: 'Es ist ein Fehler aufgetreten.', field: null, fields: [] }
+  }
+
   const wid = computed(() => {
     const id = parseInt(route.params.wid, 10)
     return Number.isFinite(id) ? id : null
@@ -66,10 +101,12 @@ export const useWorkspaceApi = () => {
   const getEvent    = (eventId) => get(`/v1/workspace/${wid.value}/events/${eventId}`)
   const createEvent = (body) => post(`/v1/workspace/${wid.value}/events`, body)
   const patchEvent  = (eventId, body) => patch(`/v1/workspace/${wid.value}/events/${eventId}`, body)
+  const manageEvent = (eventId) => post(`/v1/workspace/${wid.value}/events/${eventId}/manage`) // body entfernt
+
   const deleteEvent = (eventId) => del(`/v1/workspace/${wid.value}/events/${eventId}`)
   const cloneEvent  = (eventId, body={}) => post(`/v1/workspace/${wid.value}/events/${eventId}:clone`, body)
-  const archiveEvent = (eventId, archived=true) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}:archive`, { archived })
+  const archiveEvent = (eventId, body={ archived: true }) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}:archive`, body)
   const saleReadiness = (eventId) =>
     get(`/v1/workspace/${wid.value}/events/${eventId}/sale-readiness`)
   const publishEvent = (eventId) =>
@@ -77,7 +114,7 @@ export const useWorkspaceApi = () => {
   const unpublishEvent = (eventId) =>
     post(`/v1/workspace/${wid.value}/events/${eventId}/unpublish`)
 
-  // Convenience: location_name
+  // Convenience (alt): location_name aus payload.location ableiten
   const withLocationName = (payload) => {
     const p = { ...(payload || {}) }
     if (typeof p.location === 'string' && p.location.trim()) {
@@ -85,6 +122,46 @@ export const useWorkspaceApi = () => {
       delete p.location
     }
     return p
+  }
+
+  /**
+   * NEU: Einheitlicher Payload-Normalizer für Events (für generische UIs).
+   * (Sende KEINE time_zone beim Create)
+   */
+  const normalizeEventPayload = (ui) => {
+    const out = {
+      title: ui.title?.trim() || '',
+      category: ui.category || null,
+      date: ui.date || null,
+      end_date: ui.end_date || null,
+      listing_mode: ui.listing_mode || 'internal',
+      external_ticket_url: ui.listing_mode === 'external' ? (ui.external_ticket_url || null) : null,
+    }
+
+    // Location
+    if (ui.locationMode === 'existing' && ui.selectedLocationId) {
+      out.location_id = Number(ui.selectedLocationId)
+    } else if (ui.locationMode === 'free' && ui.locationFree) {
+      const f = ui.locationFree
+      out.location_text_name    = f.name?.trim()    || null
+      out.location_text_address = f.address?.trim() || null
+      out.location_text_zip     = f.zip?.trim()     || null
+      out.location_text_city    = f.city?.trim()    || null
+      out.location_text_country = f.country?.trim() || null
+      out.location_text_notes   = f.notes?.trim()   || null
+    }
+
+    // Ticket-System nur für INTERNAL
+    if (out.listing_mode === 'internal') {
+      out.ticket_sale_mode = ui.ticketMode === 'reserved' ? 'reserved' : 'general'
+      if (ui.seatmap_id) out.seatmap_id = ui.seatmap_id
+    } else {
+      delete out.ticket_sale_mode
+      delete out.seatmap_id
+    }
+
+    // ⚠️ KEINE time_zone im Create-Payload!
+    return out
   }
 
   // --- Ticketing (GA + Reserved shared) ---
@@ -108,21 +185,21 @@ export const useWorkspaceApi = () => {
   const createEventWithTickets = (body) =>
     post(`/v1/workspace/${wid.value}/events:sell`, body)
 
-  // --- Holds (nur Seatmap in UI genutzt) ---
+  // --- Holds (Seatmap in UI genutzt) – Pfade an Backend angepasst ---
   const seatsStatus = (eventId, labels) =>
-    get(`/v1/workspace/${wid.value}/events/${eventId}/admin/seats`, { label: labels })
+    get(`/v1/workspace/${wid.value}/events/${eventId}/tickets/seats`, { label: labels })
   const createSeatHold = (eventId, body) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/admin/holds/seats`, body)
+    post(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/seats`, body)
   const releaseSeatHold = (eventId, cartId, body={}) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/admin/holds/${cartId}:release-seats`, body)
+    post(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}:release-seats`, body)
   const issueFromSeatHold = (eventId, cartId, body={}) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/admin/holds/${cartId}:issue-seats`, body)
+    post(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}:issue-seats`, body)
 
-  // --- Ticket-Admin: Seat Swap (Backend-Route vorhanden) ---
+  // --- Ticket-Admin: Seat Swap ---
   const swapSeat = (eventId, body) =>
     post(`/v1/workspace/${wid.value}/events/${eventId}/tickets:swap-seat`, body)
 
-  // --- Seatmaps
+  // --- Seatmaps ---
   const listSeatmaps = (q) => get(`/v1/workspace/${wid.value}/seatmaps`, { q })
   const createSeatmap = (body) => post(`/v1/workspace/${wid.value}/seatmaps`, body)
   const getSeatmap = (seatmapId) => get(`/v1/workspace/${wid.value}/seatmaps/${seatmapId}`)
@@ -194,7 +271,7 @@ export const useWorkspaceApi = () => {
     listInvites, createInvite, resendInvite, revokeInvite, acceptInvite,
 
     // events
-    listEvents, getEvent, createEvent, patchEvent, deleteEvent,
+    listEvents, getEvent, createEvent, manageEvent, patchEvent, deleteEvent,
     cloneEvent, archiveEvent, saleReadiness, publishEvent, unpublishEvent,
 
     // ticketing
@@ -223,6 +300,13 @@ export const useWorkspaceApi = () => {
     listEventArtists, addArtistToEvent, removeArtistFromEvent,
 
     // stripe
-    stripeInitAccount, stripeOnboardingLink, stripeStatus, stripeDisconnect, stripeLoginLink
+    stripeInitAccount, stripeOnboardingLink, stripeStatus, stripeDisconnect, stripeLoginLink,
+
+    // helpers
+    withLocationName,
+    normalizeEventPayload,
+
+    // error util
+    parseApiError,
   }
 }

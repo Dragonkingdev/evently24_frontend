@@ -8,7 +8,14 @@
       </NuxtLink>
     </div>
 
-    <EventCreateWizard :wid="wid" :api="api" @submit="submit" />
+    <EventCreateWizard
+      ref="wizardRef"
+      :wid="wid"
+      :api="api"
+      :busy="busy"
+      :serverError="serverError"
+      @submit="submit"
+    />
   </div>
 </template>
 
@@ -17,18 +24,55 @@ import EventCreateWizard from '~/components/business/workspaces/events/EventCrea
 
 const route = useRoute()
 const wid = Number(route.params.wid)
-const api = useWorkspaceApi() // wir reichen die Methoden in den Wizard weiter
+const api = useWorkspaceApi()
+const busy = ref(false)
+const serverError = ref(null)
+const wizardRef = ref(null)
+
+// Hilfsfunktion: bestimme „Abschnitt“ aus betroffenen Feldern (für Scroll)
+function findStepForError (err) {
+  const fields = new Set([err?.field, ...(err?.fields || [])].filter(Boolean))
+
+  // Freie Adresse -> Basis
+  if (['location_text_name','location_text_address','location_text_city'].some(f => fields.has(f))) {
+    return 1
+  }
+  // Extern: Ticket-URL -> Listing
+  if (fields.has('external_ticket_url')) return 2
+
+  // ListingMode-Konflikt
+  if (fields.has('listing_mode')) return 2
+
+  // Ticket-bezogenes (zur Sicherheit) -> Tickets
+  if (['ticket_sale_mode','seatmap_id'].some(f => fields.has(f))) return 3
+
+  // Fallback: Basis
+  return 1
+}
 
 async function submit(body){
-  // POST /workspace/{wid}/events – inkl. location_name und evtl. seatmap_id
-  const { createEvent } = api
-  const { data, error } = await createEvent(body)
-  if (error || !data?.id) {
-    console.error(error)
-    return alert(error?.data?.detail || 'Konnte Event nicht anlegen.')
+  const { createEvent, parseApiError } = api
+  try {
+    serverError.value = null
+    busy.value = true
+    const { data, error } = await createEvent(body)
+    if (error || !data?.id) throw error || new Error('Unbekannter Fehler')
+    await navigateTo(`/business/w/${wid}/events/${data.id}`)
+  } catch (err) {
+    const e = parseApiError(err)
+    serverError.value = e
+
+    // bei feldbezogenen Fehlern zum passenden Abschnitt scrollen
+    if (e.field || (e.fields && e.fields.length)) {
+      const step = findStepForError(e)
+      wizardRef.value?.goToStep(step)
+    }
+
+    if (!e.field && !(e.fields && e.fields.length)) {
+      console.error('API Error:', e)
+    }
+  } finally {
+    busy.value = false
   }
-  // Bei GA (Kontingente) kannst du später Kategorien hinzufügen
-  // Bei Reserved ist seatmap_id bereits gesetzt (im Wizard)
-  navigateTo(`/business/w/${wid}/events/${data.id}`)
 }
 </script>

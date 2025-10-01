@@ -20,23 +20,7 @@
 
       <!-- Hauptinhalt links -->
       <div class="col-12 col-lg-8 order-2 order-lg-1">
-        <EventForm :model-value="ev" edit @submit="onSave">
-          <template #extra>
-            <div class="ms-auto d-flex align-items-center gap-2">
-              <span class="text-muted small">Status: <strong>{{ ev?.status }}</strong></span>
-              <button v-if="ev?.status==='draft'" class="btn btn-sm btn-success" @click.prevent="onPublish">
-                <i class="bi bi-megaphone"></i> Veröffentlichen
-              </button>
-              <button v-else class="btn btn-sm btn-warning" @click.prevent="onUnpublish">
-                <i class="bi bi-eye-slash"></i> Depublizieren
-              </button>
-              <button class="btn btn-sm btn-outline-danger" @click.prevent="onDelete">
-                <i class="bi bi-trash"></i> Löschen
-              </button>
-            </div>
-          </template>
-        </EventForm>
-
+        <EventForm :model-value="ev" edit @submit="onSave" />
         <div v-if="flash" class="alert mt-3" :class="flash.variant">{{ flash.msg }}</div>
       </div>
     </div>
@@ -51,7 +35,8 @@ const route = useRoute()
 const wid = Number(route.params.wid)
 const eventId = Number(route.params.event_id)
 
-const { patchEvent, publishEvent, unpublishEvent, deleteEvent, saleReadiness } = useWorkspaceApi()
+const { patchEvent, saleReadiness } = useWorkspaceApi()
+
 const headers = useRequestHeaders(['cookie'])
 const apiBase = useRuntimeConfig().public.apiBaseUrl
 
@@ -74,14 +59,13 @@ function readinessMessages(rd){
   if((rd?.total_available ?? 0) <= 0) msgs.push('Keine verfügbaren Tickets (Stock ≤ sold + reserved).')
   return msgs
 }
-function renderReadinessAlert(rd, prefix='Veröffentlichen nicht möglich:'){
+function renderReadinessAlert(rd, prefix='Hinweis für internen Verkauf:'){
   const msgs = readinessMessages(rd)
-  return msgs.length ? `${prefix}\n• ${msgs.join('\n• ')}` : `${prefix} Unbekannter Fehler.`
+  return msgs.length ? `${prefix}\n• ${msgs.join('\n• ')}` : `${prefix} Unbekannter Hinweis.`
 }
 
 async function onSave (payload) {
   try {
-    // Hinweis: payload darf jetzt location_name (String) enthalten.
     await patchEvent(eventId, payload)
     await refresh()
     notify('Gespeichert.')
@@ -93,53 +77,12 @@ async function onSave (payload) {
     if (changedToInternal && ev.value?.status === 'draft') {
       const { data: rd } = await saleReadiness(eventId)
       if (!rd?.ok) {
-        notify(renderReadinessAlert(rd, 'Hinweis für internen Verkauf:'), 'alert-warning')
+        notify(renderReadinessAlert(rd), 'alert-warning')
       }
     }
   } catch (e) {
     console.error(e)
     const detail = e?.data?.detail || 'Speichern fehlgeschlagen.'
-    notify(String(detail), 'alert-danger')
-  }
-}
-
-async function onPublish () {
-  try {
-    await publishEvent(eventId)
-    await refresh()
-    notify('Event veröffentlicht.')
-  } catch (e) {
-    const rd = e?.data?.detail?.readiness
-    if (rd) {
-      notify(renderReadinessAlert(rd), 'alert-danger')
-    } else {
-      const detail = e?.data?.detail || 'Veröffentlichen fehlgeschlagen.'
-      notify(String(detail), 'alert-danger')
-    }
-  }
-}
-
-async function onUnpublish () {
-  try {
-    await unpublishEvent(eventId)
-    await refresh()
-    notify('Event depubliziert.')
-  } catch (e) {
-    console.error(e)
-    const detail = e?.data?.detail || 'Depublizieren fehlgeschlagen.'
-    notify(String(detail), 'alert-danger')
-  }
-}
-
-async function onDelete () {
-  if (!confirm('Event wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) return
-  try {
-    await deleteEvent(eventId)
-    notify('Event gelöscht.')
-    navigateTo(`/business/w/${wid}/events`)
-  } catch (e) {
-    console.error(e)
-    const detail = e?.data?.detail || 'Löschen fehlgeschlagen.'
     notify(String(detail), 'alert-danger')
   }
 }

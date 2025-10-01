@@ -3,7 +3,7 @@
   <header class="border-bottom bg-white sticky-top">
     <div class="container-fluid d-flex align-items-center justify-content-between py-2">
       <div class="d-flex align-items-center gap-3">
-        <!-- mobile burger: toggelt Sidebar (CSS-Klasse .is-open) -->
+        <!-- mobile burger: toggelt Sidebar -->
         <button class="btn btn-outline-secondary d-md-none" @click="$emit('toggle-sidebar')" aria-label="Menü öffnen">
           <i class="bi bi-list"></i>
         </button>
