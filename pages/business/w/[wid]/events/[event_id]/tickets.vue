@@ -1,4 +1,3 @@
-<!-- pages/business/w/[wid]/events/[event_id]/tickets.vue -->
 <template>
   <div>
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -23,7 +22,7 @@
             <div class="fw-semibold mb-1">General Admission</div>
             <div class="small text-muted">
               Kein Sitzplan aktiv – <strong>keine Seat-Labels nötig</strong>.  
-              Tickets können direkt erzeugt werden (Minting). Reservierungen sind hier nicht erforderlich.
+              Tickets können direkt <strong>erstellt</strong> werden. Reservierungen sind hier nicht erforderlich.
             </div>
           </div>
           <TicketsManager :event-id="eventId" mode="ga" />
@@ -35,7 +34,7 @@
             <div>
               <div class="fw-semibold">Sitzplätze (Seatmap)</div>
               <div class="small">
-                In <b>Erzeugen & Reservieren</b> kannst du Tickets direkt erzeugen <em>und</em> Seats reservieren.
+                In <b>Erstellen & Reservieren</b> kannst du Tickets direkt erstellen <em>und</em> Seats reservieren.
                 Im Tab <b>Tickets</b> gibt’s zusätzlich den <em>Ticket-Editor</em> zum Seat-Tausch (gleiche Kategorie).
               </div>
             </div>
@@ -56,7 +55,6 @@ const route = useRoute()
 const wid = Number(route.params.wid)
 const eventId = Number(route.params.event_id)
 
-const { getEvent } = useWorkspaceApi()
 const headers = useRequestHeaders(['cookie'])
 const apiBase = useRuntimeConfig().public.apiBaseUrl
 
