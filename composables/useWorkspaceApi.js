@@ -143,12 +143,12 @@ export const useWorkspaceApi = () => {
       out.location_id = Number(ui.selectedLocationId)
     } else if (ui.locationMode === 'free' && ui.locationFree) {
       const f = ui.locationFree
-      out.location_text_name    = f.name?.trim()    || null
+      out.location_text_name    = f.name?.trim() || null
       out.location_text_address = f.address?.trim() || null
-      out.location_text_zip     = f.zip?.trim()     || null
-      out.location_text_city    = f.city?.trim()    || null
+      out.location_text_zip     = f.zip?.trim() || null
+      out.location_text_city    = f.city?.trim() || null
       out.location_text_country = f.country?.trim() || null
-      out.location_text_notes   = f.notes?.trim()   || null
+      out.location_text_notes   = f.notes?.trim() || null
     }
 
     // Ticket-System nur für INTERNAL
@@ -185,7 +185,21 @@ export const useWorkspaceApi = () => {
   const createEventWithTickets = (body) =>
     post(`/v1/workspace/${wid.value}/events:sell`, body)
 
-  // --- Holds (Seatmap in UI genutzt) – Pfade an Backend angepasst ---
+  // --- Holds (NEU: GA + Seats) ---
+  // GA-Hold
+  const createGAHold = (eventId, body) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/ga`, body)
+  const releaseGAHoldAll = (eventId, cartId) =>
+    del(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}`)
+  const issueFromGAHold = (eventId, cartId, body={}) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}:issue`, body)
+
+  // Holds common
+  const listHolds = (eventId, q) => get(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds`, q)
+  const patchHold = (eventId, cartId, body) => patch(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}`, body)
+  const holdCheckoutLink = (eventId, cartId) => get(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}/checkout-link`)
+
+  // Seatmap-Hold
   const seatsStatus = (eventId, labels) =>
     get(`/v1/workspace/${wid.value}/events/${eventId}/tickets/seats`, { label: labels })
   const createSeatHold = (eventId, body) =>
@@ -278,8 +292,10 @@ export const useWorkspaceApi = () => {
     addTicketCategories, listTicketCategories, patchTicketCategory, deleteTicketCategory,
     bulkUpsertCategories, mintTickets, listTickets, ticketsSummary, createEventWithTickets,
 
-    // holds (Seatmap)
+    // holds (Seatmap + GA)
+    createGAHold, releaseGAHoldAll, issueFromGAHold,
     seatsStatus, createSeatHold, releaseSeatHold, issueFromSeatHold,
+    listHolds, patchHold, holdCheckoutLink,
 
     // ticket admin
     swapSeat,

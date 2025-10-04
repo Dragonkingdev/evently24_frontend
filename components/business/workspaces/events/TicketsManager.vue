@@ -65,41 +65,35 @@
               <!-- EXISTING ROWS -->
               <tr v-for="c in categories" :key="`cat-${c.id}`">
                 <td class="text-muted">#{{ c.id }}</td>
-
                 <td>
                   <template v-if="c._mode==='edit'">
                     <input class="form-control" v-model="c._edit.name" />
                   </template>
                   <template v-else>{{ c.name }}</template>
                 </td>
-
                 <td>
                   <template v-if="c._mode==='edit'">
                     <input class="form-control" type="number" min="0" step="0.01" v-model.number="c._edit.price" />
                   </template>
                   <template v-else>{{ formatPrice(c.price) }}</template>
                 </td>
-
                 <td>
                   <template v-if="c._mode==='edit'">
                     <input class="form-control" type="number" min="0" step="1" v-model.number="c._edit.stock" />
                   </template>
                   <template v-else>{{ c.stock }}</template>
                 </td>
-
                 <td>
                   <template v-if="c._mode==='edit'">
                     <input class="form-control" v-model="c._edit.code" />
                   </template>
                   <template v-else>{{ c.code || '—' }}</template>
                 </td>
-
                 <td>
                   <span class="badge bg-light text-dark">
                     {{ availableOf(c) }}
                   </span>
                 </td>
-
                 <td class="text-end">
                   <div class="btn-group">
                     <template v-if="c._mode==='edit'">
@@ -122,7 +116,7 @@
                 </td>
               </tr>
 
-              <!-- CREATE ROWS (am Tabellenende) -->
+              <!-- CREATE ROWS -->
               <tr v-for="(r,i) in newRows" :key="`new-${i}`" class="table-row-new">
                 <td class="text-muted">neu</td>
                 <td><input class="form-control" v-model="r.name" placeholder="z. B. Stehplatz" required/></td>
@@ -153,31 +147,25 @@
 
         <!-- SAVE BAR -->
         <div class="d-flex flex-wrap gap-2 justify-content-end">
-          <button class="btn btn-primary"
-                  :disabled="!canSaveAny"
-                  @click="saveAll">
+          <button class="btn btn-primary" :disabled="!canSaveAny" @click="saveAll">
             <i class="bi bi-save me-1"></i> Speichern
           </button>
         </div>
 
-        <!-- JSON-IMPORT (eingeklappt) -->
+        <!-- JSON-IMPORT -->
         <div class="card border-0 border-top mt-4">
           <div class="card-header d-flex align-items-center justify-content-between">
             <div class="fw-semibold">
               <i class="bi bi-braces"></i> JSON-Import (manuell)
             </div>
-            <button class="btn btn-sm btn-outline-secondary"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#manualJsonImport"
-                    aria-expanded="false"
-                    aria-controls="manualJsonImport">
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#manualJsonImport">
               <i class="bi bi-chevron-expand"></i> Anzeigen
             </button>
           </div>
           <div id="manualJsonImport" class="collapse">
             <div class="card-body">
               <p class="small text-muted mb-2">
-                Struktur: <code>[{ "id": 123?, "code": "VIP"?, "name": "VIP", "price": 99.9, "stock": 50 }]</code>
+                Struktur: <code>[{ "id":123?, "code":"VIP"?, "name":"VIP", "price": 99.9, "stock": 50 }]</code>
               </p>
               <div class="d-flex gap-2 mb-2">
                 <button class="btn btn-sm btn-outline-secondary" @click="exampleBulk">
@@ -201,10 +189,10 @@
             {{ isGA ? 'Tickets erstellen' : 'Tickets erstellen & Seats reservieren' }}
           </div>
           <div class="small text-muted" v-if="isGA">
-            Kein Sitzplan aktiv – <strong>Seat-Labels nicht nötig</strong>. Tickets z. B. für Gästeliste/Komps.
+            Kein Sitzplan aktiv – <strong>Seat-Labels nicht nötig</strong>. Du kannst zusätzlich <strong>GA-Reservierungen</strong> mit E-Mail anlegen.
           </div>
           <div class="small text-muted" v-else>
-            Mit Seatmap kannst du Tickets optional per Seat-Label erstellen und Seats reservieren (Hold).
+            Mit Seatmap kannst du Seats gezielt reservieren (Hold) und einer <strong>E-Mail</strong> zuweisen.
           </div>
         </div>
 
@@ -212,7 +200,6 @@
         <div class="card border mb-3">
           <div class="card-body">
             <h6 class="mb-3"><i class="bi bi-coin me-1"></i> Tickets erstellen</h6>
-
             <div class="row g-3 align-items-end">
               <div class="col-md-4">
                 <label class="form-label">Kategorie</label>
@@ -223,57 +210,133 @@
                   </option>
                 </select>
               </div>
-
               <div class="col-md-3">
                 <label class="form-label">Stückzahl</label>
                 <input class="form-control" type="number" min="1" v-model.number="mint.quantity" placeholder="z. B. 10"/>
               </div>
-
               <div class="col-md-3" v-if="!isGA">
                 <label class="form-label">Seat-Prefix (optional)</label>
                 <input class="form-control" v-model="mint.seat_label_prefix" placeholder="z. B. A"/>
               </div>
-
-              <div class="col-md-2">
+              <div class="col-md-auto">
                 <button class="btn btn-outline-primary w-100" @click="mintNow">
                   <i class="bi bi-plus-circle"></i> Erstellen
                 </button>
               </div>
             </div>
-
             <div class="small text-muted mt-2">
-              Erstellt <strong>physische Tickets</strong> (ohne Kauf). Stock-Grenzen werden eingehalten.
+              Erstellt <strong>physische Tickets</strong> (ohne Kauf). Für Zuweisung an E-Mail nutze unten <em>Reservieren</em>.
             </div>
           </div>
         </div>
 
-        <!-- HOLD (nur Seatmap) -->
+        <!-- GA HOLD (auch im GA-Modus sichtbar) -->
+        <div class="card border mb-3" v-if="isGA">
+          <div class="card-body">
+            <h6 class="mb-3"><i class="bi bi-shield me-1"></i> Reservieren (GA)</h6>
+            <div class="row g-3 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label">Kategorie</label>
+                <select class="form-select" v-model.number="gaHold.category_id">
+                  <option disabled :value="null">– Kategorie wählen –</option>
+                  <option v-for="c in categories" :key="c.id" :value="c.id">#{{ c.id }} – {{ c.name }}</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Menge</label>
+                <input class="form-control" type="number" min="1" v-model.number="gaHold.qty" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">TTL (Tage)</label>
+                <input class="form-control" type="number" min="1" v-model.number="gaHold.ttl_days" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">E-Mail (optional)</label>
+                <input class="form-control" type="email" v-model.trim="gaHold.email" placeholder="kunde@example.com" />
+              </div>
+            </div>
+            <div class="row g-2 mt-3">
+              <div class="col-md-6 d-grid">
+                <button class="btn btn-outline-primary" :disabled="!canCreateGAHold" @click="createGAHoldNow">
+                  <i class="bi bi-shield"></i> Hold anlegen
+                </button>
+              </div>
+              <div class="col-md-6 small text-muted">
+                Reserviert Kontingent; läuft nach TTL ab, wenn kein Kauf erfolgt.
+              </div>
+            </div>
+
+            <div v-if="lastGAHold.cart_id" class="alert alert-light border mt-3">
+              <div class="d-flex flex-wrap align-items-center justify-content-between">
+                <div>
+                  <strong>GA-Hold:</strong> Cart #{{ lastGAHold.cart_id }}
+                  <span class="text-muted">• bis {{ formatDate(lastGAHold.reserved_until) }}</span>
+                  <span v-if="lastGAHold.assignee_email" class="badge bg-secondary ms-1">E-Mail: {{ lastGAHold.assignee_email }}</span>
+                </div>
+                <div class="btn-group mt-2 mt-sm-0">
+                  <button class="btn btn-sm btn-outline-secondary" @click="releaseGAHoldNow(lastGAHold.cart_id)">
+                    <i class="bi bi-x-circle"></i> Freigeben
+                  </button>
+                  <button class="btn btn-sm btn-outline-success" @click="issueGAHoldNow(lastGAHold.cart_id)">
+                    <i class="bi bi-check2-circle"></i> Ausstellen (gratis)
+                  </button>
+                </div>
+              </div>
+              <div class="small mt-2">
+                {{ (lastGAHold.items||[]).map(i => `#${i.category_id} × ${i.qty} (${catName(i.category_id)})`).join(', ') }}
+              </div>
+
+              <!-- Checkout-Link GA -->
+              <div class="row g-2 align-items-center mt-2">
+                <div class="col-md-6 d-grid">
+                  <button class="btn btn-sm btn-outline-primary" @click="fetchGaCheckoutLink(lastGAHold.cart_id)">
+                    <i class="bi bi-link-45deg"></i> Checkout-Link
+                  </button>
+                </div>
+                <div class="col-md-6" v-if="lastGAHold.checkout_url">
+                  <div class="input-group input-group-sm">
+                    <input class="form-control" :value="lastGAHold.checkout_url" readonly />
+                    <button class="btn btn-outline-secondary" @click="copyToClipboard(lastGAHold.checkout_url)">
+                      <i class="bi bi-clipboard"></i>
+                    </button>
+                    <a class="btn btn-outline-success" :href="lastGAHold.checkout_url" target="_blank" rel="noopener">
+                      <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-2 mt-2">
+                <div class="col-md-6">
+                  <input class="form-control" v-model.trim="gaIssueEmail" type="email" placeholder="E-Mail fürs Ausstellen (optional)" />
+                </div>
+                <div class="col-md-6 small text-muted">Wenn leer, wird die Hold-E-Mail (falls vorhanden) genutzt.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HOLD (Seatmap) -->
         <div class="card border" v-if="!isGA">
           <div class="card-body">
             <h6 class="mb-3"><i class="bi bi-shield me-1"></i> Seats reservieren (Hold)</h6>
 
-            <!-- Eingaben -->
             <div class="row g-3 align-items-end">
               <div class="col-md-4">
                 <label class="form-label">Kategorie</label>
                 <select class="form-select" v-model.number="seatHold.category_id">
                   <option disabled :value="null">– Kategorie wählen –</option>
-                  <option v-for="c in categories" :key="c.id" :value="c.id">
-                    #{{ c.id }} – {{ c.name }}
-                  </option>
+                  <option v-for="c in categories" :key="c.id" :value="c.id">#{{ c.id }} – {{ c.name }}</option>
                 </select>
               </div>
-
               <div class="col-md-5">
                 <label class="form-label">Seat-Labels</label>
                 <textarea class="form-control" rows="2" v-model="seatHold.labelsRaw" placeholder="A-1, A-2, A-3"></textarea>
               </div>
-
               <div class="col-md-1">
                 <label class="form-label">TTL</label>
                 <input class="form-control" type="number" min="1" v-model.number="seatHold.ttl_days" />
               </div>
-
               <div class="col-md-2 d-grid gap-2">
                 <button class="btn btn-outline-secondary" @click="checkSeatsStatus">
                   <i class="bi bi-search"></i> Status
@@ -281,6 +344,16 @@
                 <button class="btn btn-outline-primary" :disabled="!canCreateHold" @click="createSeatHoldNow">
                   <i class="bi bi-shield"></i> Hold
                 </button>
+              </div>
+            </div>
+
+            <div class="row g-3 align-items-end mt-2">
+              <div class="col-md-4">
+                <label class="form-label">E-Mail (optional)</label>
+                <input class="form-control" type="email" v-model.trim="seatHold.email" placeholder="kunde@example.com" />
+              </div>
+              <div class="col-md-8 small text-muted">
+                Wird beim Ausstellen als Käuferadresse genutzt (oder überschrieben, wenn unten explizit angegeben).
               </div>
             </div>
 
@@ -304,8 +377,9 @@
             <div v-if="lastHold.cart_id" class="alert alert-light border mt-3">
               <div class="d-flex flex-wrap align-items-center justify-content-between">
                 <div>
-                  <strong>Hold erstellt:</strong> Cart #{{ lastHold.cart_id }}  
+                  <strong>Hold erstellt:</strong> Cart #{{ lastHold.cart_id }}
                   <span class="text-muted">• bis {{ formatDate(lastHold.reserved_until) }}</span>
+                  <span v-if="lastHold.assignee_email" class="badge bg-secondary ms-1">E-Mail: {{ lastHold.assignee_email }}</span>
                 </div>
                 <div class="btn-group mt-2 mt-sm-0">
                   <button class="btn btn-sm btn-outline-secondary" @click="releaseSeatHoldSome(lastHold.cart_id)">
@@ -318,6 +392,33 @@
               </div>
               <div class="small mt-2">
                 {{ (lastHold.items||[]).map(i => `${i.seat_label}`).join(', ') }}
+              </div>
+
+              <!-- Checkout-Link Seats -->
+              <div class="row g-2 align-items-center mt-2">
+                <div class="col-md-6 d-grid">
+                  <button class="btn btn-sm btn-outline-primary" @click="fetchSeatCheckoutLink(lastHold.cart_id)">
+                    <i class="bi bi-link-45deg"></i> Checkout-Link
+                  </button>
+                </div>
+                <div class="col-md-6" v-if="lastHold.checkout_url">
+                  <div class="input-group input-group-sm">
+                    <input class="form-control" :value="lastHold.checkout_url" readonly />
+                    <button class="btn btn-outline-secondary" @click="copyToClipboard(lastHold.checkout_url)">
+                      <i class="bi bi-clipboard"></i>
+                    </button>
+                    <a class="btn btn-outline-success" :href="lastHold.checkout_url" target="_blank" rel="noopener">
+                      <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-2 mt-2">
+                <div class="col-md-6">
+                  <input class="form-control" v-model.trim="seatIssueEmail" type="email" placeholder="E-Mail fürs Ausstellen (optional)" />
+                </div>
+                <div class="col-md-6 small text-muted">Wenn leer, wird die Hold-E-Mail (falls vorhanden) genutzt.</div>
               </div>
             </div>
 
@@ -338,6 +439,20 @@
                 <button class="btn btn-outline-success" @click="issueHoldSeats()">
                   <i class="bi bi-check2-circle"></i> Hold ausstellen (gratis)
                 </button>
+                <button class="btn btn-outline-primary" @click="fetchManualCheckoutLink()">
+                  <i class="bi bi-link-45deg"></i> Checkout-Link holen
+                </button>
+              </div>
+              <div class="col-12" v-if="manualCheckout.url">
+                <div class="input-group input-group-sm">
+                  <input class="form-control" :value="manualCheckout.url" readonly />
+                  <button class="btn btn-outline-secondary" @click="copyToClipboard(manualCheckout.url)">
+                    <i class="bi bi-clipboard"></i>
+                  </button>
+                  <a class="btn btn-outline-success" :href="manualCheckout.url" target="_blank" rel="noopener">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -423,19 +538,19 @@
             <thead class="table-light">
               <tr>
                 <th style="width:90px">ID</th>
-                <th style="width:120px">Kategorie</th>
+                <th style="width:220px">Kategorie</th>
                 <th style="width:160px">E-Mail</th>
                 <th style="width:140px">Seat</th>
                 <th style="width:120px">Reserved</th>
                 <th style="width:120px">Sold</th>
                 <th style="width:200px">Erstellt</th>
-                <th style="width:180px" class="text-end"></th>
+                <th style="width:220px" class="text-end">Aktionen</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="t in tickets" :key="t.id">
                 <td class="text-muted">#{{ t.id }}</td>
-                <td>{{ t.category_id }}</td>
+                <td>{{ t.category_name || catName(t.category_id) }}</td>
                 <td>{{ t.buyer_email || '—' }}</td>
                 <td>{{ t.seat_label || '—' }}</td>
                 <td><span class="badge" :class="t.reserved ? 'bg-warning' : 'bg-light text-dark'">{{ t.reserved ? 'reserved' : '—' }}</span></td>
@@ -443,6 +558,9 @@
                 <td>{{ formatDate(t.created_at) }}</td>
                 <td class="text-end">
                   <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-secondary" @click="openViewer(t)">
+                      <i class="bi bi-eye"></i> Anzeigen
+                    </button>
                     <button v-if="!isGA" class="btn btn-sm btn-outline-primary" @click="openEditor(t)">
                       <i class="bi bi-pencil"></i> Edit
                     </button>
@@ -469,6 +587,7 @@
         </div>
       </section>
 
+      <!-- TAB: SUMMARY -->
       <section v-show="tab==='summary'">
         <div class="d-flex align-items-center justify-content-between">
           <h6 class="mb-2">Übersicht</h6>
@@ -527,7 +646,7 @@
         <div v-else class="text-muted">Noch keine Daten – <a href="#" @click.prevent="loadSummary">laden</a>.</div>
       </section>
 
-      <pre v-if="debug" class="small mt-4 bg-light p-2 border rounded">{{ debug }}</pre>
+      <pre v-if="debug" class="small mt-4 bg-light p-2 border rounded">{{ debugText }}</pre>
     </div>
   </div>
 
@@ -556,7 +675,7 @@
             <div class="alert alert-light border">
               <div><strong>Ticket #{{ editor.ticket.id }}</strong></div>
               <div class="small text-muted">
-                Kategorie: {{ editor.ticket.category_id }} • Seat: {{ editor.ticket.seat_label || '—' }} •
+                Kategorie: {{ editor.ticket.category_name || catName(editor.ticket.category_id) }} • Seat: {{ editor.ticket.seat_label || '—' }} •
                 Status:
                 <span :class="['badge', editor.ticket.sold?'bg-success':'bg-light text-dark']">{{ editor.ticket.sold?'sold':'—' }}</span>
                 <span :class="['badge ms-1', editor.ticket.reserved?'bg-warning':'bg-light text-dark']">{{ editor.ticket.reserved?'reserved':'—' }}</span>
@@ -601,7 +720,32 @@
     </div>
   </div>
 
-  <!-- ===== Bootstrap Toast-Container (Alerts) ===== -->
+  <!-- Ticket-Viewer (Modal) -->
+  <div class="modal fade show" tabindex="-1" style="display:block" v-if="viewer && viewer.open" @click.self="closeViewer">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title"><i class="bi bi-ticket-perforated me-1"></i> Ticket anzeigen</h6>
+          <button type="button" class="btn-close" @click="closeViewer"></button>
+        </div>
+        <div class="modal-body" v-if="viewer.ticket">
+          <div class="mb-2"><strong>#{{ viewer.ticket.id }}</strong></div>
+          <div class="small text-muted">
+            Kategorie: {{ viewer.ticket.category_name || catName(viewer.ticket.category_id) }}<br>
+            Seat: {{ viewer.ticket.seat_label || '—' }}<br>
+            E-Mail: {{ viewer.ticket.buyer_email || '—' }}<br>
+            Reserved: {{ viewer.ticket.reserved ? 'ja' : 'nein' }} • Sold: {{ viewer.ticket.sold ? 'ja':'nein' }}<br>
+            Erstellt: {{ formatDate(viewer.ticket.created_at) }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" @click="closeViewer">Schließen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Toasts -->
   <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1200">
     <div v-for="t in toasts" :key="t.id"
          :class="['toast', 'show', 'align-items-center', 'border-0', toastVariantClass(t.variant)]"
@@ -619,11 +763,18 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 
+defineOptions({ name: 'TicketsMager' })
+
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
   mode: { type: String, default: null } // 'ga' | 'reserved'
 })
 
+/**
+ * Modus:
+ * - Wenn props.mode === 'reserved' -> Sitzplan-Modus
+ * - sonst GA
+ */
 const isReserved = computed(() => (props.mode || '').toLowerCase() === 'reserved')
 const isGA = computed(() => !isReserved.value)
 
@@ -632,56 +783,76 @@ const {
   addTicketCategories, bulkUpsertCategories,
   mintTickets, listTickets, ticketsSummary,
   saleReadiness, publishEvent,
+  // Holds
+  createGAHold, releaseGAHoldAll, issueFromGAHold,
   seatsStatus, createSeatHold, releaseSeatHold, issueFromSeatHold,
+  listHolds, patchHold, holdCheckoutLink,
+  // admin
   swapSeat
 } = useWorkspaceApi()
 
 // Tabs & debug
 const tab = ref('categories')
 const debug = ref(null)
+const debugText = computed(() => {
+  const v = debug.value
+  if (v == null) return ''
+  try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2) }
+  catch { return String(v) }
+})
 
 /* =========================
- * BOOTSTRAP TOASTS (Alerts)
+ * Bootstrap Toasts
  * =======================*/
 const toasts = ref([])
-/** variant: success | danger | warning | info | primary | secondary */
-function showToast(variant = 'primary', message = '', title = null, delay = 4000){
+function showToast(variant='primary', message='', title=null, delay=4000){
   const id = Math.random().toString(36).slice(2)
   toasts.value.push({ id, variant, message, title })
   setTimeout(() => dismissToast(id), delay)
 }
 function dismissToast(id){
   const i = toasts.value.findIndex(t => t.id === id)
-  if (i >= 0) toasts.value.splice(i, 1)
+  if (i>=0) toasts.value.splice(i,1)
 }
 function toastVariantClass(v){
   return ({
-    success: 'text-bg-success',
-    danger: 'text-bg-danger',
-    warning: 'text-bg-warning',
-    info: 'text-bg-info',
-    primary: 'text-bg-primary',
-    secondary: 'text-bg-secondary'
-  }[v] || 'text-bg-secondary')
+    success:'text-bg-success', danger:'text-bg-danger', warning:'text-bg-warning',
+    info:'text-bg-info', primary:'text-bg-primary', secondary:'text-bg-secondary'
+  }[v]||'text-bg-secondary')
 }
-const toastOk   = (msg, title='Gespeichert') => showToast('success', msg, title)
-const toastErr  = (msg, title='Fehler')      => showToast('danger',  msg, title)
-const toastInfo = (msg, title='Hinweis')     => showToast('info',    msg, title)
+const toastOk=(m,t='OK')=>showToast('success',m,t)
+const toastErr=(m,t='Fehler')=>showToast('danger',m,t)
+const toastInfo=(m,t='Hinweis')=>showToast('info',m,t)
 
 /* =========================
- * CATEGORIES
+ * Helper: URL bauen & kopieren
+ * =======================*/
+function buildCheckoutUrl(path){
+  try { return new URL(path || '/', window.location.origin).toString() }
+  catch { return String(path || '/') }
+}
+async function copyToClipboard(text){
+  try { await navigator.clipboard.writeText(text); showToast('secondary','In Zwischenablage kopiert.') }
+  catch { toastInfo('Konnte nicht kopieren – bitte manuell.') }
+}
+
+/* =========================
+ * Categories
  * =======================*/
 const categories = ref([])
+const catMap = computed(() => Object.fromEntries((categories.value||[]).map(c => [Number(c.id), c.name])))
+const catName = (id) => catMap.value[Number(id)] || `#${id}`
+
 function primeEditable(c){
-  return { ...c, _mode: 'view', _edit: { name: c.name, price: c.price, stock: c.stock, code: c.code } }
+  return { ...c, _mode:'view', _edit:{ name:c.name, price:c.price, stock:c.stock, code:c.code } }
 }
 async function loadCategories(){
   const { data, error } = await listTicketCategories(props.eventId)
   if (error) { toastErr('Fehler beim Laden der Kategorien.'); return }
   categories.value = (data || []).map(primeEditable)
 }
-function startEdit(c){ c._mode = 'edit' }
-function cancelEdit(c){ c._edit = { name: c.name, price: c.price, stock: c.stock, code: c.code }; c._mode = 'view' }
+function startEdit(c){ c._mode='edit' }
+function cancelEdit(c){ c._edit={ name:c.name, price:c.price, stock:c.stock, code:c.code }; c._mode='view' }
 function isDirty(c){ return ['name','price','stock','code'].some(k => c._edit[k] !== c[k]) }
 function availableOf(c){
   const stock = c._mode==='edit' ? (c._edit.stock ?? 0) : (c.stock ?? 0)
@@ -701,8 +872,7 @@ async function delExisting(c){
   if (!confirm(`Kategorie ${c.name} löschen?`)) return
   const { error } = await deleteTicketCategory(props.eventId, c.id)
   if (error) { toastErr('Löschen fehlgeschlagen.'); return }
-  await loadCategories()
-  toastOk('Kategorie gelöscht.')
+  await loadCategories(); toastOk('Kategorie gelöscht.')
 }
 const newRows = ref([])
 function addNewRow(){ newRows.value.push({ name:'', price:null, stock:null, code:null }) }
@@ -711,114 +881,187 @@ const canSaveAny = computed(() =>
   categories.value.some(c => c._mode==='edit' && isDirty(c))
 )
 async function saveAll(){
-  // Edits
   for (const c of categories.value.filter(c => c._mode==='edit' && isDirty(c))) await saveExisting(c)
-  // Creates
   const creates = newRows.value
     .filter(r => r.name?.trim() && Number.isFinite(Number(r.price)) && Number.isFinite(Number(r.stock)))
-    .map(r => ({ name: r.name.trim(), price: Number(r.price), stock: Number(r.stock), code: r.code || null }))
+    .map(r => ({ name:r.name.trim(), price:Number(r.price), stock:Number(r.stock), code:r.code || null }))
   if (creates.length){
     const { error } = await addTicketCategories(props.eventId, creates)
     if (error) { toastErr('Fehler beim Hinzufügen.'); return }
-    newRows.value = []
-    toastOk('Neue Kategorie(n) hinzugefügt.')
+    newRows.value = []; toastOk('Neue Kategorie(n) hinzugefügt.')
   }
-  await loadCategories()
-  toastOk('Änderungen gespeichert.')
+  await loadCategories(); toastOk('Änderungen gespeichert.')
 }
-// JSON Import (eingeklappt)
+// Bulk
 const bulkText = ref('')
 function exampleBulk(){
   bulkText.value = JSON.stringify([
-    { code: "GA", name: "Stehplatz", price: 25, stock: 200 },
-    { code: "VIP", name: "VIP", price: 79, stock: 40 }
+    { code: "GA",  name: "Stehplatz", price: 25, stock: 200 },
+    { code: "VIP", name: "VIP",       price: 79, stock: 40  }
   ], null, 2)
 }
 async function doBulkUpsert(){
-  let payload = null
-  try { payload = JSON.parse(bulkText.value || '[]') } catch { toastErr('Ungültiges JSON.'); return }
-  if (!Array.isArray(payload) || !payload.length) { toastErr('Leeres Array.'); return }
+  let payload=null; try{ payload=JSON.parse(bulkText.value||'[]') }catch{ toastErr('Ungültiges JSON.'); return }
+  if (!Array.isArray(payload) || !payload.length){ toastErr('Leeres Array.'); return }
   const { error } = await bulkUpsertCategories(props.eventId, { categories: payload })
-  if (error) { toastErr('Bulk Upsert fehlgeschlagen.'); return }
-  await loadCategories()
-  toastOk('Bulk-Änderungen übernommen.')
+  if (error){ toastErr('Bulk Upsert fehlgeschlagen.'); return }
+  await loadCategories(); toastOk('Bulk-Änderungen übernommen.')
 }
 
 /* =========================
- * CREATE / HOLDS
+ * Mint / Holds
  * =======================*/
 const mint = reactive({ category_id: null, quantity: 1, seat_label_prefix: '' })
 async function mintNow(){
   if (!mint.category_id || !mint.quantity) return
-  const body = { category_id: Number(mint.category_id), quantity: Number(mint.quantity), seat_label_prefix: isGA.value ? null : (mint.seat_label_prefix || null) }
+  const body = {
+    category_id: Number(mint.category_id),
+    quantity: Number(mint.quantity),
+    seat_label_prefix: isGA.value ? null : (mint.seat_label_prefix || null)
+  }
   const { data, error } = await mintTickets(props.eventId, body)
   if (error) { toastErr('Erstellen fehlgeschlagen.'); return }
-  tab.value = 'tickets'
-  paging.offset = 0
+  tab.value='tickets'; paging.offset=0
   await Promise.allSettled([loadTickets(), loadSummary()])
   debug.value = { created: data }
   toastOk('Tickets erstellt.')
 }
 
-// Holds
-const seatHold = reactive({ category_id: null, labelsRaw: '', ttl_days: 30 })
+// GA-Hold
+const gaHold = reactive({ category_id: null, qty: 1, ttl_days: 30, email: '' })
+const canCreateGAHold = computed(() => !!gaHold.category_id && gaHold.qty>0)
+const lastGAHold = reactive({ cart_id: null, reserved_until: null, items: [], assignee_email: null, checkout_url: null })
+const gaIssueEmail = ref('')
+async function createGAHoldNow(){
+  if (!canCreateGAHold.value) return
+  const body = {
+    items: [{ category_id: Number(gaHold.category_id), qty: Number(gaHold.qty) }],
+    ttl_days: Number(gaHold.ttl_days || 30),
+    assignee_email: gaHold.email?.trim() || null
+  }
+  const { data, error } = await createGAHold(props.eventId, body)
+  if (error){ toastErr('GA Hold fehlgeschlagen.'); return }
+  Object.assign(lastGAHold, {
+    cart_id: data?.cart_id ?? null,
+    reserved_until: data?.reserved_until ?? null,
+    items: data?.items ?? [],
+    assignee_email: data?.assignee_email ?? null,
+    checkout_url: null
+  })
+  await Promise.allSettled([loadCategories(), loadSummary()])
+  toastOk(`GA Hold erstellt (Cart #${lastGAHold.cart_id}).`)
+}
+async function releaseGAHoldNow(cartId){
+  if (!cartId) return
+  const { error } = await releaseGAHoldAll(props.eventId, Number(cartId))
+  if (error){ toastErr('GA Hold freigeben fehlgeschlagen.'); return }
+  Object.assign(lastGAHold, { cart_id:null, reserved_until:null, items:[], assignee_email:null, checkout_url:null })
+  await Promise.allSettled([loadCategories(), loadSummary()])
+  toastOk('GA Hold freigegeben.')
+}
+async function issueGAHoldNow(cartId){
+  if (!cartId) return
+  const body = {}
+  const email = gaIssueEmail.value?.trim()
+  if (email) body.assignee_email = email
+  const { data, error } = await issueFromGAHold(props.eventId, Number(cartId), body)
+  if (error){ toastErr('GA Hold ausstellen fehlgeschlagen.'); return }
+  Object.assign(lastGAHold, { cart_id:null, reserved_until:null, items:[], assignee_email:null, checkout_url:null })
+  await Promise.allSettled([loadCategories(), loadSummary(), loadTickets()])
+  toastOk('GA Hold ausgestellt (COMP).')
+}
+async function fetchGaCheckoutLink(cartId){
+  if (!cartId) return
+  const { data, error } = await holdCheckoutLink(props.eventId, Number(cartId))
+  if (error){ toastErr('Checkout-Link laden fehlgeschlagen.'); return }
+  lastGAHold.checkout_url = buildCheckoutUrl(data?.path || `/checkout/c/${data?.access_token}`)
+  toastOk('Checkout-Link bereit.')
+}
+
+// Seats-Hold
+const seatHold = reactive({ category_id: null, labelsRaw: '', ttl_days: 30, email:'' })
 const seatsStatusMap = ref({})
-const lastHold = reactive({ cart_id: null, reserved_until: null, items: [] })
+const lastHold = reactive({ cart_id: null, reserved_until: null, items: [], assignee_email: null, checkout_url: null })
 const canCreateHold = computed(() => {
   const labels = parseLabels(seatHold.labelsRaw)
   if (!seatHold.category_id || !labels.length) return false
   if (!Object.keys(seatsStatusMap.value||{}).length) return false
   return labels.every(lbl => seatsStatusMap.value[lbl] === 'free')
 })
-function parseLabels(raw){
-  return (raw || '').split(/[\s,;\n\r]+/).map(s => s.trim()).filter(Boolean)
-}
+function parseLabels(raw){ return (raw||'').split(/[\s,;\n\r]+/).map(s=>s.trim()).filter(Boolean) }
 async function checkSeatsStatus(){
   const labels = parseLabels(seatHold.labelsRaw)
   if (!labels.length) { toastInfo('Bitte Seat-Labels angeben.'); return }
   const { data, error } = await seatsStatus(props.eventId, labels)
-  if (error) { toastErr('Seat-Status prüfen fehlgeschlagen.'); return }
+  if (error){ toastErr('Seat-Status prüfen fehlgeschlagen.'); return }
   seatsStatusMap.value = data?.status || {}
-  showToast('secondary', 'Seat-Status geladen.')
+  showToast('secondary','Seat-Status geladen.')
 }
 async function createSeatHoldNow(){
   const labels = parseLabels(seatHold.labelsRaw)
   if (!seatHold.category_id || !labels.length) return
-  const body = { event_id: Number(props.eventId), items: [{ category_id: Number(seatHold.category_id), seat_labels: labels }], ttl_days: Number(seatHold.ttl_days || 30) }
+  const body = {
+    items: [{ category_id: Number(seatHold.category_id), seat_labels: labels }],
+    ttl_days: Number(seatHold.ttl_days || 30),
+    assignee_email: seatHold.email?.trim() || null
+  }
   const { data, error } = await createSeatHold(props.eventId, body)
-  if (error) { toastErr('Seat Hold fehlgeschlagen.'); return }
-  lastHold.cart_id = data?.cart_id || null
-  lastHold.reserved_until = data?.reserved_until || null
-  lastHold.items = data?.items || []
+  if (error){ toastErr('Seat Hold fehlgeschlagen.'); return }
+  Object.assign(lastHold, {
+    cart_id: data?.cart_id ?? null,
+    reserved_until: data?.reserved_until ?? null,
+    items: data?.items ?? [],
+    assignee_email: data?.assignee_email ?? null,
+    checkout_url: null
+  })
   await Promise.allSettled([loadCategories(), loadSummary()])
-  toastOk(`Seat Hold erstellt (Cart #${data?.cart_id ?? '–'}).`)
+  toastOk(`Seat Hold erstellt (Cart #${lastHold.cart_id}).`)
 }
 const holdOps = reactive({ cart_id: null, labels: '' })
 async function releaseSeatHoldSome(cartIdOverride=null){
-  const cid = Number(cartIdOverride ?? holdOps.cart_id)
-  if (!cid) return
+  const cid = Number(cartIdOverride ?? holdOps.cart_id); if (!cid) return
   const labels = parseLabels(holdOps.labels)
   const body = labels.length ? { seat_labels: labels } : {}
   const { data, error } = await releaseSeatHold(props.eventId, cid, body)
-  if (error) { toastErr('Seats freigeben fehlgeschlagen.'); return }
-  if (cid === lastHold.cart_id) { lastHold.cart_id = null; lastHold.items = [] }
+  if (error){ toastErr('Seats freigeben fehlgeschlagen.'); return }
+  if (cid === lastHold.cart_id) { Object.assign(lastHold, { cart_id:null, items:[], assignee_email:null, checkout_url:null }) }
   debug.value = { release_seats: data }
   await Promise.allSettled([loadCategories(), loadSummary()])
   toastOk('Seat(s) aus Hold freigegeben.')
 }
+const seatIssueEmail = ref('')
 async function issueHoldSeats(cartIdOverride=null){
-  const cid = Number(cartIdOverride ?? holdOps.cart_id)
-  if (!cid) return
-  const { data, error } = await issueFromSeatHold(props.eventId, cid, {})
-  if (error) { toastErr('Hold ausstellen fehlgeschlagen.'); return }
-  if (cid === lastHold.cart_id) { lastHold.cart_id = null; lastHold.items = [] }
+  const cid = Number(cartIdOverride ?? holdOps.cart_id); if (!cid) return
+  const body = {}
+  const email = seatIssueEmail.value?.trim() || lastHold.assignee_email || null
+  if (email) body.assignee_email = email
+  const { data, error } = await issueFromSeatHold(props.eventId, cid, body)
+  if (error){ toastErr('Hold ausstellen fehlgeschlagen.'); return }
+  if (cid === lastHold.cart_id) { Object.assign(lastHold, { cart_id:null, items:[], assignee_email:null, checkout_url:null }) }
   debug.value = { issue_seats: data }
   await Promise.allSettled([loadCategories(), loadSummary(), loadTickets()])
   toastOk('Hold ausgestellt (COMP).')
 }
+async function fetchSeatCheckoutLink(cartId){
+  if (!cartId) return
+  const { data, error } = await holdCheckoutLink(props.eventId, Number(cartId))
+  if (error){ toastErr('Checkout-Link laden fehlgeschlagen.'); return }
+  lastHold.checkout_url = buildCheckoutUrl(data?.path || `/checkout/c/${data?.access_token}`)
+  toastOk('Checkout-Link bereit.')
+}
+
+// Manuell: Checkout-Link
+const manualCheckout = reactive({ url: null })
+async function fetchManualCheckoutLink(){
+  const cid = Number(holdOps.cart_id); if (!cid) return
+  const { data, error } = await holdCheckoutLink(props.eventId, cid)
+  if (error){ toastErr('Checkout-Link laden fehlgeschlagen.'); return }
+  manualCheckout.url = buildCheckoutUrl(data?.path || `/checkout/c/${data?.access_token}`)
+  toastOk('Checkout-Link bereit.')
+}
 
 /* =========================
- * TICKETS LIST
+ * Tickets list
  * =======================*/
 const tickets = ref([])
 const paging = reactive({ limit: 100, offset: 0 })
@@ -826,123 +1069,104 @@ const filter = reactive({ reserved: null, sold: null })
 const onlyMinted = ref(false)
 const prevFilter = reactive({ reserved: null, sold: null })
 watch(onlyMinted, (v) => {
-  if (v) { prevFilter.reserved = filter.reserved; prevFilter.sold = filter.sold; filter.reserved = false; filter.sold = false }
-  else { filter.reserved = prevFilter.reserved; filter.sold = prevFilter.sold }
+  if (v) { prevFilter.reserved=filter.reserved; prevFilter.sold=filter.sold; filter.reserved=false; filter.sold=false }
+  else { filter.reserved=prevFilter.reserved; filter.sold=prevFilter.sold }
 })
 
 const ticketFilters = reactive({ email: '' })
 const ticketSort = reactive({ by: 'created_at', dir: 'desc' })
-
-function applyTicketQuery(){ paging.offset = 0; loadTickets() }
-
+function applyTicketQuery(){ paging.offset=0; loadTickets() }
 async function loadTickets(){
   const q = {
-    limit: Math.min(Number(paging.limit || 100), 1000),
-    offset: Math.max(Number(paging.offset || 0), 0),
-    sort_by: ticketSort.by,
-    sort_dir: ticketSort.dir
+    limit: Math.min(Number(paging.limit||100), 1000),
+    offset: Math.max(Number(paging.offset||0), 0),
+    sort_by: ticketSort.by, sort_dir: ticketSort.dir
   }
-  if (onlyMinted.value) { q.reserved = false; q.sold = false }
+  if (onlyMinted.value) { q.reserved=false; q.sold=false }
   else {
     if (filter.reserved !== null) q.reserved = filter.reserved
     if (filter.sold !== null) q.sold = filter.sold
   }
   if (ticketFilters.email?.trim()) q.buyer_email = ticketFilters.email.trim()
   const { data, error } = await listTickets(props.eventId, q)
-  if (error) { toastErr('Fehler beim Laden der Tickets.'); return }
+  if (error){ toastErr('Fehler beim Laden der Tickets.'); return }
   tickets.value = data || []
 }
 
 /* =========================
- * SUMMARY / MISC
+ * Summary / misc
  * =======================*/
 const summary = ref(null)
 async function loadSummary(){
   const { data, error } = await ticketsSummary(props.eventId)
-  if (error) { toastErr('Summary fehlgeschlagen.'); return }
+  if (error){ toastErr('Summary fehlgeschlagen.'); return }
   summary.value = data || null
 }
 async function publish(){
   const { error } = await publishEvent(props.eventId)
-  if (error) { toastErr('Publish fehlgeschlagen.'); return }
+  if (error){ toastErr('Publish fehlgeschlagen.'); return }
   toastOk('Event veröffentlicht.')
 }
 async function checkReady(){
   const { data, error } = await saleReadiness(props.eventId)
-  if (error) { toastErr('Prüfung fehlgeschlagen.'); return }
+  if (error){ toastErr('Prüfung fehlgeschlagen.'); return }
   debug.value = { sale_readiness: data ?? 'OK' }
-  showToast('secondary', 'Readiness geprüft.')
+  showToast('secondary','Readiness geprüft.')
 }
 
 /* =========================
- * TICKET-EDITOR (Seat Switch)
+ * Ticket-Editor (Seat Switch)
  * =======================*/
-const editor = ref({
-  open: false,
-  ticketId: null,
-  ticket: null,
-  newSeat: '',
-  seatStatus: null,
-  newSeatOk: false
-})
-
+const editor = ref({ open:false, ticketId:null, ticket:null, newSeat:'', seatStatus:null, newSeatOk:false })
 function openEditor(row=null){
-  editor.value.open = true
-  if (row) {
-    editor.value.ticketId = row.id
-    editor.value.ticket = row
-  } else {
-    editor.value.ticketId = null
-    editor.value.ticket = null
-  }
-  editor.value.newSeat = ''
-  editor.value.seatStatus = null
-  editor.value.newSeatOk = false
+  editor.value.open=true
+  editor.value.ticketId = row ? row.id : null
+  editor.value.ticket   = row || null
+  editor.value.newSeat=''; editor.value.seatStatus=null; editor.value.newSeatOk=false
 }
-function closeEditor(){ editor.value.open = false }
-
-function findTicketInLocal(id){
-  id = Number(id)
-  return (tickets.value || []).find(t => Number(t.id) === id) || null
-}
+function closeEditor(){ editor.value.open=false }
+function findTicketInLocal(id){ id=Number(id); return (tickets.value||[]).find(t => Number(t.id)===id) || null }
 async function loadTicketIntoEditor(){
   if (!editor.value.ticketId) return
-  const t = findTicketInLocal(editor.value.ticketId)
-  if (t) { editor.value.ticket = t; return }
-  await loadTickets()
-  editor.value.ticket = findTicketInLocal(editor.value.ticketId)
+  const t=findTicketInLocal(editor.value.ticketId); if (t){ editor.value.ticket=t; return }
+  await loadTickets(); editor.value.ticket=findTicketInLocal(editor.value.ticketId)
   if (!editor.value.ticket) toastInfo('Ticket nicht gefunden. Filter ggf. anpassen.', 'Info')
 }
 async function checkEditorSeatStatus(){
-  editor.value.seatStatus = null
-  editor.value.newSeatOk = false
+  editor.value.seatStatus=null; editor.value.newSeatOk=false
   if (!editor.value.ticket || !editor.value.newSeat?.trim()) return
-  const labels = [editor.value.newSeat.trim()]
+  const labels=[editor.value.newSeat.trim()]
   const { data, error } = await seatsStatus(props.eventId, labels)
-  if (error) { toastErr('Seat-Status prüfen fehlgeschlagen.'); return }
+  if (error){ toastErr('Seat-Status prüfen fehlgeschlagen.'); return }
   editor.value.seatStatus = data?.status?.[labels[0]] || null
-  editor.value.newSeatOk = (editor.value.seatStatus === 'free')
-  showToast(editor.value.newSeatOk ? 'success' : 'warning', `Neuer Sitz: ${editor.value.seatStatus || 'unbekannt'}`)
+  editor.value.newSeatOk = (editor.value.seatStatus==='free')
+  showToast(editor.value.newSeatOk ? 'success':'warning', `Neuer Sitz: ${editor.value.seatStatus || 'unbekannt'}`)
 }
 async function doSwapSeatFromEditor(){
   if (!editor.value.ticket || !editor.value.newSeatOk) return
-  const body = { ticket_id: Number(editor.value.ticket.id), new_seat_label: editor.value.newSeat.trim() }
+  const body = { ticket_id:Number(editor.value.ticket.id), new_seat_label: editor.value.newSeat.trim() }
   const { data, error } = await swapSeat(props.eventId, body)
-  if (error) { toastErr('Seat-Swap fehlgeschlagen.'); return }
+  if (error){ toastErr('Seat-Swap fehlgeschlagen.'); return }
   debug.value = { swap: data }
   await loadTickets()
-  const updated = findTicketInLocal(editor.value.ticket.id)
-  if (updated) editor.value.ticket = updated
+  const updated=findTicketInLocal(editor.value.ticket.id); if (updated) editor.value.ticket=updated
   toastOk('Sitzplatz getauscht.')
 }
+
+/* =========================
+ * Ticket-Viewer (Anzeigen)
+ * =======================*/
+const viewer = ref({ open:false, ticket:null })
+function openViewer(row){ viewer.value={ open:true, ticket:row } }
+function closeViewer(){ viewer.value.open=false }
 
 // Utils
 function formatDate(v){
   if (!v) return '—'
   const d = new Date(v); if (isNaN(d)) return '—'
-  try { return d.toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) }
+  try { return d.toLocaleString('de-DE', { dateStyle:'medium', timeStyle:'short' }) }
   catch {
-    const pad = n => String(n).padStart(2,'0')
+    const pad=n=>String(n).padStart(2,'0')
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
 }
@@ -951,23 +1175,29 @@ function formatPrice(p){
   return new Intl.NumberFormat('de-DE', { style:'currency', currency:'EUR' }).format(n)
 }
 function exportCsv(){
-  const rows = tickets.value || []
-  if (!rows.length) { toastInfo('Keine Daten zum Export.'); return }
-  const headers = ['id','category_id','buyer_email','seat_label','reserved','sold','created_at']
-  const csv = [
+  const rows=tickets.value||[]
+  if (!rows.length){ toastInfo('Keine Daten zum Export.'); return }
+  const headers=['id','category_id','category_name','buyer_email','seat_label','reserved','sold','created_at']
+  const csv=[
     headers.join(','),
-    ...rows.map(t => [t.id, t.category_id, (t.buyer_email||''), (t.seat_label||''), t.reserved?1:0, t.sold?1:0, t.created_at].map(v => `"${String(v).replaceAll('"','""')}"`).join(','))
+    ...rows.map(t => [
+      t.id, t.category_id, (t.category_name||catName(t.category_id)), (t.buyer_email||''),
+      (t.seat_label||''), (t.reserved?1:0), (t.sold?1:0), t.created_at
+    ].map(v => `"${String(v).replaceAll('"','""')}"`).join(','))
   ].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a'); a.href = url; a.download = `tickets-${props.eventId}.csv`
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'})
+  const url=URL.createObjectURL(blob)
+  const a=document.createElement('a'); a.href=url; a.download=`tickets-${props.eventId}.csv`
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
-  showToast('secondary', 'CSV exportiert.')
+  showToast('secondary','CSV exportiert.')
 }
 
 // Initial load
 async function loadAll(){ await Promise.allSettled([loadCategories(), loadTickets(), loadSummary()]) }
 onMounted(() => { loadAll() })
+
+// Re-load bei Event-Wechsel
+watch(() => props.eventId, () => { loadAll() })
 </script>
 
 <style scoped>
