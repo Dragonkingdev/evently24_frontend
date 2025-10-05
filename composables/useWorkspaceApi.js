@@ -274,6 +274,99 @@ export const useWorkspaceApi = () => {
     del(`/v1/workspace/${wid.value}/psp/stripe/connection`, { remote, keep_settings })
   const stripeLoginLink       = () => post(`/v1/workspace/${wid.value}/psp/stripe/login-link`)
 
+  // ======================================================
+  // Location-Options (Meta) – GET + Admin (PUT/PATCH)
+  // ======================================================
+  // State (global via useState, damit zwischen Seiten persistiert)
+  const locoptsState = useState('locopts_state', () => null) // {version_map, groups}
+  const locoptsEtag  = useState('locopts_etag', () => null)
+  const locale       = useState('locale', () => 'de') // falls du i18n hast, ersetze das
+
+  const LOCOPTS_DATA_KEY = 'locopts:data'
+  const LOCOPTS_ETAG_KEY = 'locopts:etag'
+
+  // Pseudo-ETag wie im Backend (Summe der Gruppen-Versionen)
+  const _calcPseudoEtag = (payload) => {
+    try {
+      const sum = Object.values(payload?.version_map || {}).reduce((a, b) => a + (b || 0), 0)
+      return `"${sum}"`
+    } catch { return null }
+  }
+
+  /**
+   * Holt die Optionen vom Backend und cached sie.
+   * Nutzt Pseudo-ETag. Falls Backend 304 liefert (Nitro/Fetch), verwenden wir Cache weiter.
+   */
+  async function fetchLocationOptions (force = false) {
+    if (!force && locoptsState.value) return locoptsState.value
+
+    // localStorage lesen
+    if (process.client && !locoptsState.value) {
+      try {
+        const cached = localStorage.getItem(LOCOPTS_DATA_KEY)
+        const et = localStorage.getItem(LOCOPTS_ETAG_KEY)
+        if (cached) { locoptsState.value = JSON.parse(cached) }
+        if (et) { locoptsEtag.value = et }
+      } catch {}
+    }
+
+    try {
+      // Direkt $fetch nutzen, um Header zu setzen (useApi.get hat keine Header-Option in deinem Setup)
+      const res = await $fetch('/api/v1/workspace/location/meta', {
+        method: 'GET',
+        headers: locoptsEtag.value ? { 'If-None-Match': locoptsEtag.value } : undefined,
+      })
+      if (res) {
+        locoptsState.value = res
+        const tag = _calcPseudoEtag(res)
+        if (tag) locoptsEtag.value = tag
+        if (process.client) {
+          localStorage.setItem(LOCOPTS_DATA_KEY, JSON.stringify(res))
+          if (tag) localStorage.setItem(LOCOPTS_ETAG_KEY, tag)
+        }
+      }
+    } catch (e) {
+      // bei Fehler: wenn Cache vorhanden, bleib dabei
+      if (!locoptsState.value) {
+        // wenn kein Cache, Fehler weiterreichen
+        throw e
+      }
+    }
+    return locoptsState.value
+  }
+
+  // Admin: Gruppen-Upsert / Item-Toggle (global, NICHT workspace-gebunden)
+  const upsertLocationOptionGroup = (key, body) =>
+    put(`/v1/workspace/location/meta/${key}`, body)
+  const toggleLocationOptionItem  = (key, id_slug, active) =>
+    patch(`/v1/workspace/location/meta/${key}/items/${id_slug}`, { active })
+
+  // Hilfen: Listen + Label-Mapper
+  const _list = (k) => computed(() => (locoptsState.value?.groups?.[k] || []).map(it => ({
+    id: it.id_slug,
+    label: it.labels?.[locale.value] || it.labels?.de || it.labels?.en || it.id_slug,
+    meta: it.meta || {}
+  })))
+  const categories = _list('categories')
+  const amenities  = _list('amenities')
+  const services   = _list('services')
+  const tech       = _list('tech')
+  const rules      = _list('rules')
+
+  const labelOf = (groupKey, id) => {
+    const arr = (locoptsState.value?.groups?.[groupKey] || [])
+    const hit = arr.find(x => x.id_slug === id)
+    return hit ? (hit.labels?.[locale.value] || hit.labels?.de || hit.labels?.en || id) : id
+  }
+  const _asMap = (list) => list.reduce((acc, it) => (acc[it.id] = it.label, acc), {})
+  const optionMaps = computed(() => ({
+    categories: _asMap(categories.value),
+    amenities:  _asMap(amenities.value),
+    services:   _asMap(services.value),
+    tech:       _asMap(tech.value),
+    rules:      _asMap(rules.value),
+  }))
+
   return {
     // base
     wid, hasWid, current, features,
@@ -324,5 +417,22 @@ export const useWorkspaceApi = () => {
 
     // error util
     parseApiError,
+
+    // --- Location Options (Meta) ---
+    fetchLocationOptions,
+    upsertLocationOptionGroup,
+    toggleLocationOptionItem,
+
+    // reactive lists + helpers (für direkte Nutzung in Komponenten)
+    locoptsState,
+    locoptsEtag,
+    locale,
+    categories,
+    amenities,
+    services,
+    tech,
+    rules,
+    optionMaps,
+    labelOf,
   }
 }
