@@ -5,9 +5,8 @@ export const useWorkspaceApi = () => {
   const { lastWid, setLast } = useLastWorkspace()
   const { get, post, del, put, patch } = useApi()
 
-  // --- zentraler Error-Parser: formatiert Backend-Fehler für die UI ---
+  // --- zentraler Error-Parser ---
   const parseApiError = (err) => {
-    // Neues Backend-Schema: { errors: [ { code,message,field,fields?,meta? } ] }
     const raw = err?.data ?? err?.response?.data ?? err
     const arr = Array.isArray(raw?.errors) ? raw.errors
       : Array.isArray(raw?.detail) ? raw.detail
@@ -22,12 +21,8 @@ export const useWorkspaceApi = () => {
           : (Array.isArray(first.meta?.fields) ? first.meta.fields : [])
       }
     }
-
-    // Fallbacks: gängige FastAPI-Formen oder plain string
     const d = raw?.detail ?? raw
-    if (typeof d === 'string') {
-      return { code: 'error', message: d, field: null, fields: [] }
-    }
+    if (typeof d === 'string') return { code: 'error', message: d, field: null, fields: [] }
     if (d && typeof d === 'object') {
       return {
         code: d.code || 'error',
@@ -51,70 +46,123 @@ export const useWorkspaceApi = () => {
     ticketing: true, calendar: true, locations: true, artists: true, team: true
   }))
 
-  // --- Workspace base ---
-  const list = (q, mine_only = true) => get('/v1/workspace', { q, mine_only })
-  const create = (body) => post('/v1/workspace', body)
-  async function fetchWorkspace() {
-    if (!wid.value) return
-    const { data } = await get(`/v1/workspace/${wid.value}`)
-    if (data) current.value = data
-    setLast(wid.value)
+  // ---------- Helpers für Location-Payload ----------
+  // number | null (explizit leeren) | undefined (nicht senden)
+  const _nullableNum = (v) => {
+    if (v === null) return null
+    if (v === undefined || v === '') return undefined
+    const n = Number(v)
+    return Number.isFinite(n) ? n : undefined
   }
-  async function fetchStats() {
-    if (!wid.value) return {}
-    const { data } = await get(`/v1/workspace/${wid.value}/stats`)
-    return data || {}
+  const _txtOrNull = (v) => {
+    if (v === null) return null
+    if (typeof v === 'string') {
+      const t = v.trim()
+      return t ? t : null
+    }
+    return undefined
   }
-  function setCurrent (id) {
-    current.value = { ...(current.value || {}), id }
-    setLast(id)
-    router.push(`/business/w/${id}/dashboard`)
+  const _stripUndefined = (obj) => {
+    const o = {}
+    for (const [k, v] of Object.entries(obj || {})) {
+      if (v !== undefined) o[k] = v
+    }
+    return o
   }
 
-  // Optional weitere Workspace-Actions
-  const patchWorkspace = (body) => patch(`/v1/workspace/${wid.value}`, body)
-  const archiveWorkspace = () => post(`/v1/workspace/${wid.value}/archive`)
-  const restoreWorkspace = () => post(`/v1/workspace/${wid.value}/restore`)
-  const deleteWorkspace = () => del(`/v1/workspace/${wid.value}`)
+  /**
+   * Normalisiert Location-Payload (NETTO-Pricing + Discounts).
+   * - Leere Zahlen -> null (Clear), fehlende -> undefined (nicht senden)
+   * - Leere Strings -> null (Clear), fehlende -> undefined
+   * - DE: vat_percent = 19, wenn nicht gesetzt (undefined). null bleibt null.
+   */
+  const normalizeLocationPayload = (payload = {}) => {
+    const p = { ...(payload || {}) }
 
-  // --- Members / Invites ---
-  const listMembers = (q) => get(`/v1/workspace/${wid.value}/members`, { q })
-  const addMember = (body) => post(`/v1/workspace/${wid.value}/members`, body)
-  const updateMemberRole = (memberId, body) =>
-    patch(`/v1/workspace/${wid.value}/members/${memberId}`, body)
-  const removeMember = (memberId) =>
-    del(`/v1/workspace/${wid.value}/members/${memberId}`)
-  const leaveWorkspace = () => post(`/v1/workspace/${wid.value}/members/me/leave`)
+    if (typeof p.country === 'string') p.country = p.country.trim().toUpperCase() || undefined
 
-  const listInvites = (only_pending=true) =>
-    get(`/v1/workspace/${wid.value}/invites`, { only_pending })
-  const createInvite = (body) => post(`/v1/workspace/${wid.value}/invites`, body)
-  const resendInvite = (inviteId, ttl_days) =>
-    post(`/v1/workspace/${wid.value}/invites/${inviteId}/resend`, null, { ttl_days })
-  const revokeInvite = (inviteId) =>
-    del(`/v1/workspace/${wid.value}/invites/${inviteId}`)
-  const acceptInvite = (body) =>
-    post(`/v1/workspace/${wid.value}/invites/accept`, body)
+    // Pricing (netto)
+    const pricing = {
+      day_rate_base:           _nullableNum(p.day_rate_base),
+      day_rate_includes_hours: _nullableNum(p.day_rate_includes_hours),
+      extra_hour_rate:         _nullableNum(p.extra_hour_rate),
+      weekend_markup_percent:  _nullableNum(p.weekend_markup_percent),
+      cleaning_fee:            _nullableNum(p.cleaning_fee),
+      deposit:                 _nullableNum(p.deposit),
+      vat_percent:             _nullableNum(p.vat_percent),
+    }
 
-  // --- Events (GA & Reserved) ---
-  const listEvents  = (q, active_only=true) => get(`/v1/workspace/${wid.value}/events`, { q, active_only })
-  const getEvent    = (eventId) => get(`/v1/workspace/${wid.value}/events/${eventId}`)
-  const createEvent = (body) => post(`/v1/workspace/${wid.value}/events`, body)
-  const patchEvent  = (eventId, body) => patch(`/v1/workspace/${wid.value}/events/${eventId}`, body)
-  const manageEvent = (eventId) => post(`/v1/workspace/${wid.value}/events/${eventId}/manage`) // body entfernt
+    // Auto-VAT: nur DE + undefined -> 19 (null = Clear bleibt)
+    if (p.country === 'DE' && pricing.vat_percent === undefined) {
+      pricing.vat_percent = 19
+    }
 
-  const deleteEvent = (eventId) => del(`/v1/workspace/${wid.value}/events/${eventId}`)
-  const cloneEvent  = (eventId, body={}) => post(`/v1/workspace/${wid.value}/events/${eventId}:clone`, body)
-  const archiveEvent = (eventId, body={ archived: true }) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}:archive`, body)
-  const saleReadiness = (eventId) =>
-    get(`/v1/workspace/${wid.value}/events/${eventId}/sale-readiness`)
-  const publishEvent = (eventId) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/publish`)
-  const unpublishEvent = (eventId) =>
-    post(`/v1/workspace/${wid.value}/events/${eventId}/unpublish`)
+    // Staffelrabatte
+    let tiers = Array.isArray(p.multi_day_discounts) ? p.multi_day_discounts : undefined
+    if (tiers) {
+      tiers = tiers
+        .map(t => ({
+          min_days:    _nullableNum(t?.min_days),
+          percent_off: _nullableNum(t?.percent_off),
+        }))
+        .filter(t => (t.min_days !== undefined && t.min_days !== null && t.min_days >= 1)
+                  && (t.percent_off !== undefined && t.percent_off !== null && t.percent_off >= 0))
+        .sort((a, b) => (a.min_days - b.min_days))
+      if (!tiers.length) tiers = []
+    }
 
-  // Convenience (alt): location_name aus payload.location ableiten
+    const out = {
+      // Basis
+      name: _txtOrNull(p.name),
+      address: _txtOrNull(p.address),
+      postal_code: _txtOrNull(p.postal_code),
+      city: _txtOrNull(p.city),
+      country: p.country,
+      email: _txtOrNull(p.email),
+      phone: _txtOrNull(p.phone),
+      website: _txtOrNull(p.website),
+
+      // Status
+      status: _txtOrNull(p.status),
+      verification_status: _txtOrNull(p.verification_status),
+
+      // Buchung
+      booking_enabled: typeof p.booking_enabled === 'boolean' ? p.booking_enabled : undefined,
+      booking_notes: _txtOrNull(p.booking_notes),
+
+      // Kapazitäten
+      area_sqm:                _nullableNum(p.area_sqm),
+      capacity_seated_min:     _nullableNum(p.capacity_seated_min),
+      capacity_seated_max:     _nullableNum(p.capacity_seated_max),
+      capacity_standing_max:   _nullableNum(p.capacity_standing_max),
+      toilets_count:           _nullableNum(p.toilets_count),
+      parking_count:           _nullableNum(p.parking_count),
+      rooms_count:             _nullableNum(p.rooms_count),
+
+      // Kataloge/Medien
+      categories: Array.isArray(p.categories) ? p.categories : undefined,
+      amenities:  Array.isArray(p.amenities)  ? p.amenities  : undefined,
+      tech:       Array.isArray(p.tech)       ? p.tech       : undefined,
+      services:   Array.isArray(p.services)   ? p.services   : undefined,
+      rules:      Array.isArray(p.rules)      ? p.rules      : undefined,
+      image_urls: Array.isArray(p.image_urls) ? p.image_urls : undefined,
+
+      // Regeln & Texte
+      curfew_time: _txtOrNull(p.curfew_time),
+      min_age: _nullableNum(p.min_age),
+      max_noise_level_db: _nullableNum(p.max_noise_level_db),
+
+      // Netto-Pricing
+      ...pricing,
+      multi_day_discounts: tiers,          // [] erlaubt, um zu leeren
+      pricing_notes: _txtOrNull(p.pricing_notes),
+      cancellation_policy: _txtOrNull(p.cancellation_policy),
+    }
+
+    return _stripUndefined(out)
+  }
+
+  // Convenience: location_name aus payload.location ableiten (legacy Unterstützung)
   const withLocationName = (payload) => {
     const p = { ...(payload || {}) }
     if (typeof p.location === 'string' && p.location.trim()) {
@@ -125,10 +173,10 @@ export const useWorkspaceApi = () => {
   }
 
   /**
-   * NEU: Einheitlicher Payload-Normalizer für Events (für generische UIs).
+   * Einheitlicher Payload-Normalizer für Events.
    * (Sende KEINE time_zone beim Create)
    */
-  const normalizeEventPayload = (ui) => {
+  const normalizeEventPayload = (ui = {}) => {
     const out = {
       title: ui.title?.trim() || '',
       category: ui.category || null,
@@ -160,11 +208,73 @@ export const useWorkspaceApi = () => {
       delete out.seatmap_id
     }
 
-    // ⚠️ KEINE time_zone im Create-Payload!
     return out
   }
 
-  // --- Ticketing (GA + Reserved shared) ---
+  // --- Workspace base ---
+  const list = (q, mine_only = true) => get('/v1/workspace', { q, mine_only })
+  const create = (body) => post('/v1/workspace', body)
+  async function fetchWorkspace() {
+    if (!wid.value) return
+    const { data } = await get(`/v1/workspace/${wid.value}`)
+    if (data) current.value = data
+    setLast(wid.value)
+  }
+  async function fetchStats() {
+    if (!wid.value) return {}
+    const { data } = await get(`/v1/workspace/${wid.value}/stats`)
+    return data || {}
+  }
+  function setCurrent (id) {
+    current.value = { ...(current.value || {}), id }
+    setLast(id)
+    router.push(`/business/w/${id}/dashboard`)
+  }
+
+  // Optional Workspace-Actions
+  const patchWorkspace = (body) => patch(`/v1/workspace/${wid.value}`, body)
+  const archiveWorkspace = () => post(`/v1/workspace/${wid.value}/archive`)
+  const restoreWorkspace = () => post(`/v1/workspace/${wid.value}/restore`)
+  const deleteWorkspace = () => del(`/v1/workspace/${wid.value}`)
+
+  // --- Members / Invites ---
+  const listMembers = (q) => get(`/v1/workspace/${wid.value}/members`, { q })
+  const addMember = (body) => post(`/v1/workspace/${wid.value}/members`, body)
+  const updateMemberRole = (memberId, body) =>
+    patch(`/v1/workspace/${wid.value}/members/${memberId}`, body)
+  const removeMember = (memberId) =>
+    del(`/v1/workspace/${wid.value}/members/${memberId}`)
+  const leaveWorkspace = () => post(`/v1/workspace/${wid.value}/members/me/leave`)
+
+  const listInvites = (only_pending=true) =>
+    get(`/v1/workspace/${wid.value}/invites`, { only_pending })
+  const createInvite = (body) => post(`/v1/workspace/${wid.value}/invites`, body)
+  const resendInvite = (inviteId, ttl_days) =>
+    post(`/v1/workspace/${wid.value}/invites/${inviteId}/resend`, null, { ttl_days })
+  const revokeInvite = (inviteId) =>
+    del(`/v1/workspace/${wid.value}/invites/${inviteId}`)
+  const acceptInvite = (body) =>
+    post(`/v1/workspace/${wid.value}/invites/accept`, body)
+
+  // --- Events ---
+  const listEvents  = (q, active_only=true) => get(`/v1/workspace/${wid.value}/events`, { q, active_only })
+  const getEvent    = (eventId) => get(`/v1/workspace/${wid.value}/events/${eventId}`)
+  const createEvent = (body) => post(`/v1/workspace/${wid.value}/events`, body)
+  const patchEvent  = (eventId, body) => patch(`/v1/workspace/${wid.value}/events/${eventId}`, body)
+  const manageEvent = (eventId) => post(`/v1/workspace/${wid.value}/events/${eventId}/manage`)
+
+  const deleteEvent = (eventId) => del(`/v1/workspace/${wid.value}/events/${eventId}`)
+  const cloneEvent  = (eventId, body={}) => post(`/v1/workspace/${wid.value}/events/${eventId}:clone`, body)
+  const archiveEvent = (eventId, body={ archived: true }) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}:archive`, body)
+  const saleReadiness = (eventId) =>
+    get(`/v1/workspace/${wid.value}/events/${eventId}/sale-readiness`)
+  const publishEvent = (eventId) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}/publish`)
+  const unpublishEvent = (eventId) =>
+    post(`/v1/workspace/${wid.value}/events/${eventId}/unpublish`)
+
+  // --- Ticketing ---
   const addTicketCategories = (eventId, categories) =>
     post(`/v1/workspace/${wid.value}/events/${eventId}/ticket-categories`, categories)
   const listTicketCategories = (eventId) =>
@@ -185,8 +295,7 @@ export const useWorkspaceApi = () => {
   const createEventWithTickets = (body) =>
     post(`/v1/workspace/${wid.value}/events:sell`, body)
 
-  // --- Holds (NEU: GA + Seats) ---
-  // GA-Hold
+  // --- Holds ---
   const createGAHold = (eventId, body) =>
     post(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/ga`, body)
   const releaseGAHoldAll = (eventId, cartId) =>
@@ -194,12 +303,10 @@ export const useWorkspaceApi = () => {
   const issueFromGAHold = (eventId, cartId, body={}) =>
     post(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}:issue`, body)
 
-  // Holds common
   const listHolds = (eventId, q) => get(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds`, q)
   const patchHold = (eventId, cartId, body) => patch(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}`, body)
   const holdCheckoutLink = (eventId, cartId) => get(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}/checkout-link`)
 
-  // Seatmap-Hold
   const seatsStatus = (eventId, labels) =>
     get(`/v1/workspace/${wid.value}/events/${eventId}/tickets/seats`, { label: labels })
   const createSeatHold = (eventId, body) =>
@@ -209,7 +316,7 @@ export const useWorkspaceApi = () => {
   const issueFromSeatHold = (eventId, cartId, body={}) =>
     post(`/v1/workspace/${wid.value}/events/${eventId}/tickets/holds/${cartId}:issue-seats`, body)
 
-  // --- Ticket-Admin: Seat Swap ---
+  // --- Ticket-Admin ---
   const swapSeat = (eventId, body) =>
     post(`/v1/workspace/${wid.value}/events/${eventId}/tickets:swap-seat`, body)
 
@@ -224,7 +331,6 @@ export const useWorkspaceApi = () => {
   const seatmapLayoutSummary = (seatmapId) =>
     get(`/v1/workspace/${wid.value}/seatmaps/${seatmapId}/layout/summary`)
 
-  // Canvas Layout
   const setSeatmapLayoutCanvas = (seatmapId, body, force=false) =>
     post(`/v1/workspace/${wid.value}/seatmaps/${seatmapId}/layout/canvas?force=${force}`, body)
   const getSeatmapLayoutCanvas = (seatmapId) =>
@@ -252,9 +358,11 @@ export const useWorkspaceApi = () => {
 
   // --- Locations / Artists ---
   const listLocations = (q) => get(`/v1/workspace/${wid.value}/locations`, { q })
-  const createLocation = (body) => post(`/v1/workspace/${wid.value}/locations`, body)
+  const createLocation = (body) =>
+    post(`/v1/workspace/${wid.value}/locations`, normalizeLocationPayload(body))
   const getLocation = (locationId) => get(`/v1/workspace/${wid.value}/locations/${locationId}`)
-  const patchLocation = (locationId, body) => patch(`/v1/workspace/${wid.value}/locations/${locationId}`, body)
+  const patchLocation = (locationId, body) =>
+    patch(`/v1/workspace/${wid.value}/locations/${locationId}`, normalizeLocationPayload(body))
   const deleteLocation = (locationId) => del(`/v1/workspace/${wid.value}/locations/${locationId}`)
 
   const listArtists   = (q, kind) => get(`/v1/workspace/${wid.value}/artists`, { q, kind })
@@ -275,17 +383,15 @@ export const useWorkspaceApi = () => {
   const stripeLoginLink       = () => post(`/v1/workspace/${wid.value}/psp/stripe/login-link`)
 
   // ======================================================
-  // Location-Options (Meta) – GET + Admin (PUT/PATCH)
+  // Location-Options (Meta)
   // ======================================================
-  // State (global via useState, damit zwischen Seiten persistiert)
-  const locoptsState = useState('locopts_state', () => null) // {version_map, groups}
+  const locoptsState = useState('locopts_state', () => null)
   const locoptsEtag  = useState('locopts_etag', () => null)
-  const locale       = useState('locale', () => 'de') // falls du i18n hast, ersetze das
+  const locale       = useState('locale', () => 'de')
 
   const LOCOPTS_DATA_KEY = 'locopts:data'
   const LOCOPTS_ETAG_KEY = 'locopts:etag'
 
-  // Pseudo-ETag wie im Backend (Summe der Gruppen-Versionen)
   const _calcPseudoEtag = (payload) => {
     try {
       const sum = Object.values(payload?.version_map || {}).reduce((a, b) => a + (b || 0), 0)
@@ -293,14 +399,8 @@ export const useWorkspaceApi = () => {
     } catch { return null }
   }
 
-  /**
-   * Holt die Optionen vom Backend und cached sie.
-   * Nutzt Pseudo-ETag. Falls Backend 304 liefert (Nitro/Fetch), verwenden wir Cache weiter.
-   */
   async function fetchLocationOptions (force = false) {
     if (!force && locoptsState.value) return locoptsState.value
-
-    // localStorage lesen
     if (process.client && !locoptsState.value) {
       try {
         const cached = localStorage.getItem(LOCOPTS_DATA_KEY)
@@ -309,9 +409,7 @@ export const useWorkspaceApi = () => {
         if (et) { locoptsEtag.value = et }
       } catch {}
     }
-
     try {
-      // Direkt $fetch nutzen, um Header zu setzen (useApi.get hat keine Header-Option in deinem Setup)
       const res = await $fetch('/api/v1/workspace/location/meta', {
         method: 'GET',
         headers: locoptsEtag.value ? { 'If-None-Match': locoptsEtag.value } : undefined,
@@ -326,25 +424,19 @@ export const useWorkspaceApi = () => {
         }
       }
     } catch (e) {
-      // bei Fehler: wenn Cache vorhanden, bleib dabei
-      if (!locoptsState.value) {
-        // wenn kein Cache, Fehler weiterreichen
-        throw e
-      }
+      if (!locoptsState.value) throw e
     }
     return locoptsState.value
   }
 
-  // Admin: Gruppen-Upsert / Item-Toggle (global, NICHT workspace-gebunden)
   const upsertLocationOptionGroup = (key, body) =>
     put(`/v1/workspace/location/meta/${key}`, body)
   const toggleLocationOptionItem  = (key, id_slug, active) =>
     patch(`/v1/workspace/location/meta/${key}/items/${id_slug}`, { active })
 
-  // Hilfen: Listen + Label-Mapper
   const _list = (k) => computed(() => (locoptsState.value?.groups?.[k] || []).map(it => ({
     id: it.id_slug,
-    label: it.labels?.[locale.value] || it.labels?.de || it.labels?.en || it.id_slug,
+    label: it.labels?.[locale.value] || it.labels?.[ 'de' ] || it.labels?.[ 'en' ] || it.id_slug,
     meta: it.meta || {}
   })))
   const categories = _list('categories')
@@ -385,7 +477,7 @@ export const useWorkspaceApi = () => {
     addTicketCategories, listTicketCategories, patchTicketCategory, deleteTicketCategory,
     bulkUpsertCategories, mintTickets, listTickets, ticketsSummary, createEventWithTickets,
 
-    // holds (Seatmap + GA)
+    // holds
     createGAHold, releaseGAHoldAll, issueFromGAHold,
     seatsStatus, createSeatHold, releaseSeatHold, issueFromSeatHold,
     listHolds, patchHold, holdCheckoutLink,
@@ -414,16 +506,17 @@ export const useWorkspaceApi = () => {
     // helpers
     withLocationName,
     normalizeEventPayload,
+    normalizeLocationPayload,
 
     // error util
     parseApiError,
 
-    // --- Location Options (Meta) ---
+    // meta
     fetchLocationOptions,
     upsertLocationOptionGroup,
     toggleLocationOptionItem,
 
-    // reactive lists + helpers (für direkte Nutzung in Komponenten)
+    // options state
     locoptsState,
     locoptsEtag,
     locale,

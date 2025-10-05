@@ -92,7 +92,9 @@ const {
 
 const ready = ref(false)
 const orig = ref(null)
+
 const form = reactive({
+  // Basis
   name: '',
   address: '',
   postal_code: '',
@@ -101,10 +103,13 @@ const form = reactive({
   email: '',
   phone: '',
   website: '',
+  // Status
   status: null,
   verification_status: null,
+  // Buchung
   booking_enabled: false,
   booking_notes: '',
+  // Kapazität
   area_sqm: undefined,
   capacity_seated_min: undefined,
   capacity_seated_max: undefined,
@@ -112,19 +117,29 @@ const form = reactive({
   toilets_count: undefined,
   parking_count: undefined,
   rooms_count: undefined,
+  // Kataloge/Medien/Regeln
   categories: [],
   amenities: [],
   tech: [],
   services: [],
-  price_base: undefined,
-  price_per_hour: undefined,
-  price_notes: '',
+  rules: [],
+  image_urls: [],
+
   curfew_time: '',
   min_age: undefined,
   max_noise_level_db: undefined,
-  rules: [],
-  availability_notes: '',
-  image_urls: [],
+
+  // ===== Preise & Tarife (NETTO) =====
+  day_rate_base: undefined,
+  day_rate_includes_hours: undefined,
+  extra_hour_rate: undefined,
+  weekend_markup_percent: undefined,
+  cleaning_fee: undefined,
+  deposit: undefined,
+  vat_percent: undefined,
+  multi_day_discounts: [],       // [{ min_days, percent_off }]
+  pricing_notes: '',
+  cancellation_policy: '',
 })
 
 const v = reactive({ name: '' })
@@ -159,29 +174,43 @@ const selectedCategoryBadges = computed(() => {
 })
 
 function fmt (iso) { try { return new Date(iso).toLocaleString() } catch { return '—' } }
+
+// kopiert nur bekannte Keys aus src in form (damit alles reaktiv bleibt)
 function copyFrom (src) {
   Object.keys(form).forEach(k => {
     if (Array.isArray(form[k])) {
-      form[k] = Array.isArray(src?.[k]) ? [...src[k]] : []
+      form[k] = Array.isArray(src?.[k]) ? JSON.parse(JSON.stringify(src[k])) : []
     } else {
-      form[k] = (src?.[k] ?? (Array.isArray(form[k]) ? [] : ''))
+      // Zahlenfelder sollen bei fehlendem Wert 'undefined' sein (damit number-inputs korrekt arbeiten)
+      if (['area_sqm','capacity_seated_min','capacity_seated_max','capacity_standing_max','toilets_count','parking_count','rooms_count',
+           'day_rate_base','day_rate_includes_hours','extra_hour_rate','weekend_markup_percent','cleaning_fee','deposit','vat_percent',
+           'min_age','max_noise_level_db'].includes(k)) {
+        form[k] = (src?.[k] !== undefined && src?.[k] !== null) ? src[k] : undefined
+      } else {
+        form[k] = (src?.[k] !== undefined && src?.[k] !== null) ? src[k] : ''
+      }
     }
   })
 }
+
+// Strings: '' -> null (Clear); Zahlen: undefined bleibt undefined, null bleibt null
 function normalizeOut (o) {
   return Object.fromEntries(
     Object.entries(o).map(([k, v]) => {
-      if (Array.isArray(v)) return [k, v.length ? v : undefined]
-      return [k, (v === '' || v === undefined) ? undefined : v]
+      if (Array.isArray(v)) return [k, v]
+      if (typeof v === 'string') return [k, v.trim() === '' ? null : v.trim()]
+      return [k, v]
     })
   )
 }
+
 function isEqual (a, b) {
   if (Array.isArray(a) || Array.isArray(b)) {
     return JSON.stringify(a ?? []) === JSON.stringify(b ?? [])
   }
   return String(a ?? '') === String(b ?? '')
 }
+
 const dirty = computed(() => orig.value && Object.keys(form).some(k => !isEqual(form[k], orig.value[k] ?? '')))
 function resetToOrig () { if (orig.value) copyFrom(orig.value) }
 
@@ -195,12 +224,16 @@ function validate () {
   return !v.name
 }
 
+// nur Deltas, inkl. Arrays (auch [] um zu leeren)
 function buildPatchBody () {
   const out = {}
   const norm = normalizeOut(form)
   for (const [k, v] of Object.entries(norm)) {
     const prev = orig.value?.[k]
-    const prevNorm = (prev === null || prev === undefined || (Array.isArray(prev) && prev.length === 0) || prev === '') ? undefined : prev
+    const prevNorm = (prev === null || prev === undefined || (Array.isArray(prev) && prev.length === 0) || prev === '')
+      ? (Array.isArray(prev) ? [] : undefined)
+      : prev
+
     if (Array.isArray(v) || Array.isArray(prevNorm)) {
       const a = JSON.stringify(v ?? [])
       const b = JSON.stringify(prev ?? [])
@@ -265,7 +298,7 @@ onMounted(() => { if (wid.value && Number.isFinite(location_id.value)) load() })
 <style scoped>
 img.rounded.border { object-fit: cover; }
 
-/* Toggle-Chips: rund & kompakt (Form-Komponente nutzt diese Klassen) */
+/* Toggle-Chips: rund & kompakt */
 .btn.btn-sm { border-radius: .5rem; }
 .btn-check + .btn { margin-right: .25rem; margin-bottom: .25rem; }
 </style>

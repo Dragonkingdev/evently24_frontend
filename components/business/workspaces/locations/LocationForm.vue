@@ -368,7 +368,7 @@
             <div class="col-12 col-md-5">
               <label class="form-label mb-1">Preisvorschau: Tage</label>
               <input type="number" min="1" step="1" class="form-control" v-model.number="previewDays" />
-              <!-- Rabatt-Hinweis (ohne Durchstreichung hier) -->
+              <!-- Rabatt-Hinweis -->
               <div v-if="activeDiscount" class="mt-1">
                 <span class="badge bg-success">-{{ activeDiscount.percent_off }}% ab {{ activeDiscount.min_days }} Tagen</span>
               </div>
@@ -523,6 +523,13 @@ const effectiveVatPct = computed(() => {
   return Number(props.form.vat_percent) || 0
 })
 const vatFactor = computed(() => 1 + (effectiveVatPct.value / 100))
+
+// Wenn Land=DE und nicht überschrieben -> MwSt. im Formular automatisch setzen (für Speicherung)
+watch([isDE, overrideVat], () => {
+  if (isDE.value && !overrideVat.value) {
+    props.form.vat_percent = 19
+  }
+})
 
 // NETTO -> BRUTTO
 function toGross (netValue) {
