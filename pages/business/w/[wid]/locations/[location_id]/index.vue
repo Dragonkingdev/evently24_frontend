@@ -1,6 +1,6 @@
-<!-- pages/business/w/[wid]/locations/[locationId]/index.vue -->
+<!-- pages/business/w/[wid]/locations/[location_id]/index.vue -->
 <template>
-  <div class="container-narrow" v-if="ready">
+  <div class="container-fluid" v-if="ready">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="d-flex align-items-center gap-2">
@@ -15,413 +15,43 @@
       </div>
     </div>
 
-    <!-- Main Card -->
-    <div class="card">
-      <div class="card-body">
-        <!-- Quick Facts / Badges -->
-        <div class="d-flex flex-wrap gap-2 mb-3">
-          <span class="badge" :class="form.booking_enabled ? 'bg-success' : 'bg-secondary'">
-            <i :class="form.booking_enabled ? 'bi bi-calendar-check me-1' : 'bi bi-calendar-x me-1'"></i>
-            {{ form.booking_enabled ? 'Buchbar' : 'Nicht buchbar' }}
-          </span>
-
-          <span v-if="form.status" class="badge" :class="statusBadgeClass">
-            <i class="bi bi-circle-fill me-1"></i>{{ form.status }}
-          </span>
-          <span v-if="form.verification_status" class="badge" :class="verificationBadgeClass">
-            <i class="bi bi-shield-check me-1"></i>{{ form.verification_status }}
-          </span>
-
-          <span v-if="form.area_sqm" class="badge bg-light text-dark border">
-            <i class="bi bi-aspect-ratio me-1"></i>{{ form.area_sqm }} m²
-          </span>
-          <span v-if="form.capacity_seated_max" class="badge bg-light text-dark border">
-            <i class="bi bi-people me-1"></i>{{ form.capacity_seated_max }} Sitzplätze
-          </span>
-          <span v-if="form.capacity_standing_max" class="badge bg-light text-dark border">
-            <i class="bi bi-people-fill me-1"></i>{{ form.capacity_standing_max }} stehend
-          </span>
-
-          <!-- bestehende Kategorie-Badges (nur Anzeige) -->
-          <span
-            v-for="c in selectedCategoryBadges"
-            :key="c.id"
-            class="badge text-uppercase bg-success"
-            :title="c.id"
-          >
-            <i v-if="c.icon" :class="`bi ${c.icon} me-1`"></i>{{ c.label }}
-          </span>
-        </div>
-
-        <!-- FORM -->
-        <form @submit.prevent="submit">
-          <div class="row g-4">
-
-            <!-- Basis -->
-            <div class="col-12">
-              <h5 class="mb-2">Basis</h5>
-              <div class="row g-3">
-                <div class="col-12">
-                  <label class="form-label">Name<span class="text-danger">*</span></label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    v-model.trim="form.name"
-                    :class="{ 'is-invalid': v.name }"
-                    required
-                  />
-                  <div class="form-text">Offizieller Venue-Name (eindeutig innerhalb derselben Stadt im Workspace).</div>
-                  <div v-if="v.name" class="invalid-feedback">{{ v.name }}</div>
-                </div>
-
-                <div class="col-md-8">
-                  <label class="form-label">Adresse</label>
-                  <input type="text" class="form-control" v-model.trim="form.address" />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">PLZ</label>
-                  <input type="text" class="form-control" v-model.trim="form.postal_code" />
-                </div>
-
-                <div class="col-md-6">
-                  <label class="form-label">Stadt</label>
-                  <input type="text" class="form-control" v-model.trim="form.city" />
-                  <div class="form-text">Wichtig für die Duplikatsprüfung (Name + Stadt).</div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Land (ISO-2)</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    v-model.trim="form.country"
-                    maxlength="2"
-                    @input="form.country = form.country?.toUpperCase() || ''"
-                  />
-                  <div class="form-text">z. B. DE, AT, CH — wird serverseitig validiert.</div>
-                </div>
-
-                <div class="col-md-6">
-                  <label class="form-label">E-Mail</label>
-                  <input type="email" class="form-control" v-model.trim="form.email" />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Telefon</label>
-                  <input type="tel" class="form-control" v-model.trim="form.phone" />
-                  <div class="form-text">Server normalisiert auf „+” und Ziffern.</div>
-                </div>
-
-                <div class="col-12">
-                  <label class="form-label">Website</label>
-                  <input type="url" class="form-control" v-model.trim="form.website" />
-                  <div class="form-text">„https://” wird falls nötig ergänzt.</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Buchung -->
-            <div class="col-12">
-              <h5 class="mb-2">Buchung</h5>
-              <div class="row g-3 align-items-center">
-                <div class="col-md-4">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="booking_enabled" v-model="form.booking_enabled">
-                    <label class="form-check-label" for="booking_enabled">Buchbar</label>
-                  </div>
-                </div>
-                <div class="col-md-8">
-                  <label class="form-label">Buchungs-Hinweise</label>
-                  <input type="text" class="form-control" v-model.trim="form.booking_notes"
-                         placeholder="z. B. nur Wochenenden, Mindestmiete 4 Std., Anfragebestätigung erforderlich…" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Kapazität & Fläche -->
-            <div class="col-12">
-              <h5 class="mb-2">Kapazität & Fläche</h5>
-              <div class="row g-3">
-                <div class="col-md-3">
-                  <label class="form-label">Fläche (m²)</label>
-                  <input type="number" min="0" class="form-control" v-model.number="form.area_sqm" />
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Sitzplätze (min)</label>
-                  <input type="number" min="0" class="form-control" v-model.number="form.capacity_seated_min" />
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Sitzplätze (max)</label>
-                  <input type="number" min="0" class="form-control" v-model.number="form.capacity_seated_max" />
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Stehend (max)</label>
-                  <input type="number" min="0" class="form-control" v-model.number="form.capacity_standing_max" />
-                </div>
-
-                <div class="col-md-3">
-                  <label class="form-label">WCs</label>
-                  <input type="number" min="0" class="form-control" v-model.number="form.toilets_count" />
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Parkplätze</label>
-                  <input type="number" min="0" class="form-control" v-model.number="form.parking_count" />
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Räume</label>
-                  <input type="number" min="0" class="form-control" v-model.number="form.rooms_count" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Kategorien -->
-            <div class="col-12">
-              <h5 class="mb-2">Kategorien</h5>
-              <div class="d-flex flex-wrap gap-2">
-                <template v-for="c in categories" :key="c.id">
-                  <input
-                    class="btn-check"
-                    type="checkbox"
-                    :id="`cat-${c.id}`"
-                    :value="c.id"
-                    v-model="form.categories"
-                  />
-                  <label
-                    class="btn btn-sm"
-                    :class="toggleBtnClass(form.categories, c.id)"
-                    :for="`cat-${c.id}`"
-                    :title="c.id"
-                  >
-                    <i v-if="isSelected(form.categories, c.id)" class="bi bi-check-lg me-1"></i>
-                    <i v-else-if="c.meta?.icon" :class="`bi ${c.meta.icon} me-1`"></i>
-                    {{ c.label }}
-                  </label>
-                </template>
-              </div>
-              <div class="form-text">Wähle passende Events (für Suche & Filter).</div>
-            </div>
-
-            <!-- Ausstattung -->
-            <div class="col-12">
-              <h5 class="mb-2">Ausstattung</h5>
-              <div class="d-flex flex-wrap gap-2">
-                <template v-for="a in amenities" :key="a.id">
-                  <input
-                    class="btn-check"
-                    type="checkbox"
-                    :id="`amn-${a.id}`"
-                    :value="a.id"
-                    v-model="form.amenities"
-                  />
-                  <label
-                    class="btn btn-sm"
-                    :class="toggleBtnClass(form.amenities, a.id)"
-                    :for="`amn-${a.id}`"
-                    :title="a.id"
-                  >
-                    <i v-if="isSelected(form.amenities, a.id)" class="bi bi-check-lg me-1"></i>
-                    <i v-else-if="a.meta?.icon" :class="`bi ${a.meta.icon} me-1`"></i>
-                    {{ a.label }}
-                  </label>
-                </template>
-              </div>
-            </div>
-
-            <!-- Technik -->
-            <div class="col-12">
-              <h5 class="mb-2">Technik</h5>
-              <div class="d-flex flex-wrap gap-2">
-                <template v-for="t in tech" :key="t.id">
-                  <input
-                    class="btn-check"
-                    type="checkbox"
-                    :id="`tech-${t.id}`"
-                    :value="t.id"
-                    v-model="form.tech"
-                  />
-                  <label
-                    class="btn btn-sm"
-                    :class="toggleBtnClass(form.tech, t.id)"
-                    :for="`tech-${t.id}`"
-                    :title="t.id"
-                  >
-                    <i v-if="isSelected(form.tech, t.id)" class="bi bi-check-lg me-1"></i>
-                    <i v-else-if="t.meta?.icon" :class="`bi ${t.meta.icon} me-1`"></i>
-                    {{ t.label }}
-                  </label>
-                </template>
-              </div>
-            </div>
-
-            <!-- Services -->
-            <div class="col-12">
-              <h5 class="mb-2">Catering & Services</h5>
-              <div class="d-flex flex-wrap gap-2 mb-2">
-                <template v-for="s in services" :key="s.id">
-                  <input
-                    class="btn-check"
-                    type="checkbox"
-                    :id="`svc-${s.id}`"
-                    :value="s.id"
-                    v-model="form.services"
-                  />
-                  <label
-                    class="btn btn-sm"
-                    :class="toggleBtnClass(form.services, s.id)"
-                    :for="`svc-${s.id}`"
-                    :title="s.id"
-                  >
-                    <i v-if="isSelected(form.services, s.id)" class="bi bi-check-lg me-1"></i>
-                    <i v-else-if="s.meta?.icon" :class="`bi ${s.meta.icon} me-1`"></i>
-                    {{ s.label }}
-                  </label>
-                </template>
-              </div>
-
-              <div class="row g-3">
-                <div class="col-md-3">
-                  <label class="form-label">Grundpreis (€)</label>
-                  <input type="number" min="0" step="1" class="form-control" v-model.number="form.price_base" />
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Stundensatz (€)</label>
-                  <input type="number" min="0" step="1" class="form-control" v-model.number="form.price_per_hour" />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Preis-Hinweise</label>
-                  <input type="text" class="form-control" v-model.trim="form.price_notes"
-                         placeholder="z. B. Reinigungspauschale, Kaution…" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Regeln -->
-            <div class="col-12">
-              <h5 class="mb-2">Regeln</h5>
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <label class="form-label">Sperrstunde</label>
-                  <input type="time" class="form-control" v-model="form.curfew_time" />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Mindestalter</label>
-                  <input type="number" min="0" class="form-control" v-model.number="form.min_age" />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Max. Lautstärke (dB)</label>
-                  <input type="number" min="0" class="form-control" v-model.number="form.max_noise_level_db" />
-                </div>
-
-                <div class="col-12">
-                  <div class="d-flex flex-wrap gap-2">
-                    <template v-for="r in rules" :key="r.id">
-                      <input
-                        class="btn-check"
-                        type="checkbox"
-                        :id="`rule-${r.id}`"
-                        :value="r.id"
-                        v-model="form.rules"
-                      />
-                      <label
-                        class="btn btn-sm"
-                        :class="toggleBtnClass(form.rules, r.id)"
-                        :for="`rule-${r.id}`"
-                        :title="r.id"
-                      >
-                        <i v-if="isSelected(form.rules, r.id)" class="bi bi-check-lg me-1"></i>
-                        <i v-else-if="r.meta?.icon" :class="`bi ${r.meta.icon} me-1`"></i>
-                        {{ r.label }}
-                      </label>
-                    </template>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Verfügbarkeit -->
-            <div class="col-12">
-              <h5 class="mb-2">Verfügbarkeit</h5>
-              <textarea class="form-control" rows="2" v-model.trim="form.availability_notes"
-                        placeholder="z. B. bevorzugt Fr–So, keine Feiertage, Vorlauf min. 14 Tage…"></textarea>
-            </div>
-
-            <!-- Medien -->
-            <div class="col-12">
-              <h5 class="mb-2">Medien</h5>
-              <label class="form-label">Bild-URLs (kommagetrennt)</label>
-              <input type="text" class="form-control" v-model.trim="imagesInput"
-                     placeholder="https://…/1.jpg, https://…/2.jpg" />
-              <div class="form-text">Einfacher Start – später durch Upload ersetzen.</div>
-              <div class="mt-2 d-flex flex-wrap gap-2">
-                <img v-for="(u, i) in form.image_urls" :key="i" :src="u" alt="" style="height:60px" class="rounded border" />
-              </div>
-            </div>
-
-            <!-- Status / Verifikation -->
-            <div class="col-md-6">
-              <h5 class="mb-2">Status</h5>
-              <select class="form-select" v-model="form.status">
-                <option :value="null">—</option>
-                <option value="draft">draft</option>
-                <option value="published">published</option>
-                <option value="archived">archived</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <h5 class="mb-2">Verifizierungsstatus</h5>
-              <select class="form-select" v-model="form.verification_status">
-                <option :value="null">—</option>
-                <option value="none">none</option>
-                <option value="pending">pending</option>
-                <option value="verified">verified</option>
-                <option value="rejected">rejected</option>
-              </select>
-            </div>
-
-            <!-- Hinweise / Fehler -->
-            <div class="col-12">
-              <div class="d-flex align-items-center gap-3 mt-3">
-                <span
-                  class="badge"
-                  :class="dirty ? 'bg-warning text-dark' : 'bg-light text-muted border'"
-                  title="Zeigt an, ob es ungespeicherte Änderungen gibt"
-                >
-                  {{ dirty ? 'Änderungen nicht gespeichert' : 'Keine Änderungen' }}
-                </span>
-                <span class="small text-muted">ID: {{ location_id }}</span>
-              </div>
-
-              <div v-if="errorMsg" class="alert alert-danger mt-3">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                {{ errorMsg }}
-                <div v-if="errorFields?.length" class="small mt-1">
-                  Felder: {{ errorFields.join(', ') }}
-                </div>
-              </div>
-
-              <div class="d-flex justify-content-between align-items-center mt-4">
-                <button class="btn btn-outline-secondary" type="button" @click="resetToOrig" :disabled="!dirty">
-                  <i class="bi bi-arrow-counterclockwise me-1"></i> Änderungen verwerfen
-                </button>
-                <div class="d-flex gap-2">
-                  <button class="btn btn-primary" :disabled="submitting || !dirty">
-                    <span v-if="!submitting"><i class="bi bi-check-lg me-1"></i> Speichern</span>
-                    <span v-else><i class="bi bi-hourglass-split me-1"></i> Speichern…</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </form>
+    <!-- 2-spaltiges Layout -->
+    <div class="row g-4">
+      <!-- RIGHT on lg (col-4) / TOP on mobile: Summary -->
+      <div class="col-12 col-lg-4 order-1 order-lg-2">
+        <LocationSummaryCard
+          :data="form"
+          :categoryBadges="selectedCategoryBadges"
+          :createdAt="orig?.created_at"
+          :updatedAt="orig?.updated_at"
+          @delete="doDelete"
+        />
       </div>
 
-      <!-- Danger Zone -->
-      <div class="card-footer bg-light">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="text-muted small">
-            <i class="bi bi-info-circle me-1"></i> Löschen entfernt ggf. verknüpfte Seatmaps (cascade).
+      <!-- LEFT on lg (col-8) / BELOW on mobile: Form -->
+      <div class="col-12 col-lg-8 order-2 order-lg-1">
+        <div class="card">
+          <div class="card-body">
+            <LocationForm
+              :form="form"
+              :categories="categories"
+              :amenities="amenities"
+              :services="services"
+              :tech="tech"
+              :rules="rules"
+              :status-badge-class="statusBadgeClass"
+              :verification-badge-class="verificationBadgeClass"
+              :selected-category-badges="selectedCategoryBadges"
+              :v="v"
+              :submitting="submitting"
+              :dirty="dirty"
+              :error-msg="errorMsg"
+              :error-fields="errorFields"
+              :location-id="location_id"
+              @submit="submit"
+              @reset="resetToOrig"
+            />
           </div>
-          <button class="btn btn-outline-danger btn-sm" @click="doDelete">
-            <i class="bi bi-trash me-1"></i> Location löschen
-          </button>
         </div>
       </div>
     </div>
@@ -431,6 +61,9 @@
 </template>
 
 <script setup>
+import LocationSummaryCard from '~/components/business/workspaces/locations/LocationSummaryCard.vue'
+import LocationForm from '~/components/business/workspaces/locations/LocationForm.vue'
+
 const route = useRoute()
 const router = useRouter()
 
@@ -525,13 +158,6 @@ const selectedCategoryBadges = computed(() => {
   })
 })
 
-// ------ Toggle-Button Helpers (nur grün/grau) ------
-function isSelected (arr, id) { return Array.isArray(arr) && arr.includes(id) }
-function toggleBtnClass (arr, id) {
-  return isSelected(arr, id) ? 'btn-success' : 'btn-outline-secondary'
-}
-// ---------------------------------------------------
-
 function fmt (iso) { try { return new Date(iso).toLocaleString() } catch { return '—' } }
 function copyFrom (src) {
   Object.keys(form).forEach(k => {
@@ -586,16 +212,6 @@ function buildPatchBody () {
   return out
 }
 
-const imagesInput = computed({
-  get: () => (form.image_urls || []).join(', '),
-  set: (val) => {
-    form.image_urls = (val || '')
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean)
-  }
-})
-
 async function load () {
   ready.value = false
   await fetchLocationOptions().catch(() => {})
@@ -647,14 +263,9 @@ onMounted(() => { if (wid.value && Number.isFinite(location_id.value)) load() })
 </script>
 
 <style scoped>
-.container-narrow { max-width: 900px; }
-
-h5 { font-weight: 600; }
 img.rounded.border { object-fit: cover; }
 
-.badge + .badge { margin-left: .25rem; }
-
-/* Toggle-Chips: rund & kompakt */
+/* Toggle-Chips: rund & kompakt (Form-Komponente nutzt diese Klassen) */
 .btn.btn-sm { border-radius: .5rem; }
 .btn-check + .btn { margin-right: .25rem; margin-bottom: .25rem; }
 </style>
