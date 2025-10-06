@@ -107,6 +107,44 @@
               <div class="invalid-feedback d-block" v-if="showErrors && !ticketMode">
                 Bitte Ticket-System wählen.
               </div>
+
+              <!-- ⬇️ NEU: Gebühren-Modus Auswahl -->
+              <div class="mt-3">
+                <label class="form-label mb-2">Gebühren-Modus</label>
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <div role="button" tabindex="0"
+                         @click="form.fee_mode = 'included'" @keyup.enter="form.fee_mode = 'included'"
+                         :class="['select-card h-100', form.fee_mode === 'included' ? 'active' : '']">
+                      <div class="d-flex align-items-start">
+                        <i class="bi bi-check2-circle fs-4 me-2"></i>
+                        <div>
+                          <div class="fw-semibold">Ticketpreis ist inklusive aller Gebühren</div>
+                          <div class="small text-muted">Kund:innen sehen Endpreise („inkl. Gebühren“).</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div role="button" tabindex="0"
+                         @click="form.fee_mode = 'added'" @keyup.enter="form.fee_mode = 'added'"
+                         :class="['select-card h-100', form.fee_mode === 'added' ? 'active' : '']">
+                      <div class="d-flex align-items-start">
+                        <i class="bi bi-plus-square fs-4 me-2"></i>
+                        <div>
+                          <div class="fw-semibold">Gebühren werden auf den Ticketpreis aufgeschlagen</div>
+                          <div class="small text-muted">Kund:innen sehen Basispreis + Gebühren („zzgl. Gebühren“).</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="invalid-feedback d-block" v-if="showErrors && hasServerFieldError('fee_mode')">
+                  Bitte einen Gebühren-Modus wählen.
+                </div>
+              </div>
+              <!-- ⬆️ NEU -->
+
               <div class="alert alert-info d-flex align-items-start mt-3">
                 <i class="bi bi-info-circle me-2 mt-1"></i>
                 <div>
@@ -225,7 +263,7 @@ const CATEGORIES = [
   'Webinar/Online','Community','Sonstiges'
 ]
 
-const form = reactive({ title: '', category: '', listing_mode: 'internal', external_ticket_url: '' })
+const form = reactive({ title: '', category: '', listing_mode: 'internal', external_ticket_url: '', fee_mode: 'included' })
 const showErrors = ref(false)
 const ticketMode = ref('ga')
 const localDateStart = ref(''); const localDateEnd = ref('')
@@ -248,7 +286,7 @@ const serverFieldSet = computed(() => {
 const hasServerFieldError = (name) => serverFieldSet.value.has(name)
 const LOC_FIELDS = ['location_text_name','location_text_address','location_text_city']
 const hasAnyServerLocationError = computed(() => LOC_FIELDS.some(hasServerFieldError))
-function prettyField (f) { return ({ external_ticket_url:'Externe Ticket-URL', location_text_name:'Location-Name', location_text_address:'Location-Adresse', location_text_city:'Location-Stadt' })[f] || f }
+function prettyField (f) { return ({ external_ticket_url:'Externe Ticket-URL', location_text_name:'Location-Name', location_text_address:'Location-Adresse', location_text_city:'Location-Stadt', fee_mode:'Gebühren-Modus' })[f] || f }
 
 /* Locations laden (debounced) */
 let locTimer = null
@@ -303,9 +341,12 @@ function buildApiPayload(){
 
   if (base.listing_mode === 'internal') {
     base.ticket_sale_mode = (ticketMode.value === 'reserved') ? 'reserved' : 'general'
+    // ⬇️ NEU: Gebührenmodus nur bei internem Verkauf senden
+    base.fee_mode = form.fee_mode || 'included'
   } else {
     base.ticket_sale_mode = null
     base.seatmap_id = null
+    // Bei externem Listing fee_mode nicht mitsenden
   }
   return base
 }

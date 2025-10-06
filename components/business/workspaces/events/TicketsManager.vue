@@ -1,7 +1,21 @@
+<!-- components/business/workspaces/events/TicketsManager.vue -->
 <template>
   <div class="card shadow-sm">
+    <!-- Header -->
     <div class="card-header d-flex justify-content-between align-items-center">
-      <strong>Tickets verwalten</strong>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <strong>Tickets verwalten</strong>
+        <span class="badge" :class="feeBadgeClass">{{ feeBadgeText }}</span>
+        <div class="d-flex align-items-center gap-2">
+          <label class="small text-muted mb-0">Gebühren:</label>
+          <select class="form-select form-select-sm w-auto"
+                  v-model="feeModeLocal"
+                  :disabled="savingFee">
+            <option value="included">inkl. Gebühren</option>
+            <option value="added">zzgl. Gebühren</option>
+          </select>
+        </div>
+      </div>
       <div class="btn-group">
         <button class="btn btn-sm btn-outline-info" @click="checkReady">
           <i class="bi bi-clipboard-check"></i> Readiness
@@ -13,28 +27,12 @@
     </div>
 
     <div class="card-body">
-      <!-- NAV TABS -->
+      <!-- Tabs -->
       <ul class="nav nav-tabs mb-3">
-        <li class="nav-item">
-          <button :class="['nav-link', tab==='categories' && 'active']" @click="tab='categories'">
-            <i class="bi bi-collection"></i> Kategorien
-          </button>
-        </li>
-        <li class="nav-item">
-          <button :class="['nav-link', tab==='mint_hold' && 'active']" @click="tab='mint_hold'">
-            <i class="bi bi-lightning"></i> Erstellen & Reservieren
-          </button>
-        </li>
-        <li class="nav-item">
-          <button :class="['nav-link', tab==='tickets' && 'active']" @click="tab='tickets'">
-            <i class="bi bi-tags"></i> Tickets
-          </button>
-        </li>
-        <li class="nav-item">
-          <button :class="['nav-link', tab==='summary' && 'active']" @click="tab='summary'">
-            <i class="bi bi-card-checklist"></i> Summary
-          </button>
-        </li>
+        <li class="nav-item"><button :class="['nav-link', tab==='categories' && 'active']" @click="tab='categories'"><i class="bi bi-collection"></i> Kategorien</button></li>
+        <li class="nav-item"><button :class="['nav-link', tab==='mint_hold' && 'active']" @click="tab='mint_hold'"><i class="bi bi-lightning"></i> Erstellen & Reservieren</button></li>
+        <li class="nav-item"><button :class="['nav-link', tab==='tickets' && 'active']" @click="tab='tickets'"><i class="bi bi-tags"></i> Tickets</button></li>
+        <li class="nav-item"><button :class="['nav-link', tab==='summary' && 'active']" @click="tab='summary'"><i class="bi bi-card-checklist"></i> Summary</button></li>
       </ul>
 
       <!-- TAB: CATEGORIES -->
@@ -54,7 +52,8 @@
               <tr>
                 <th style="width:88px">ID</th>
                 <th>Name</th>
-                <th style="width:140px">Preis</th>
+                <th style="width:180px">Verkaufspreis <span class="text-muted small">(inkl. Gebühren)</span></th>
+                <th style="width:190px">Veranstalter (reiner Gewinn)</th>
                 <th style="width:120px">Stock</th>
                 <th style="width:140px">Code</th>
                 <th style="width:140px">Verfügbar</th>
@@ -71,46 +70,66 @@
                   </template>
                   <template v-else>{{ c.name }}</template>
                 </td>
+
+                <!-- Verkaufspreis (inkl. Gebühren) -->
                 <td>
                   <template v-if="c._mode==='edit'">
-                    <input class="form-control" type="number" min="0" step="0.01" v-model.number="c._edit.price" />
+                    <input class="form-control"
+                           type="number" min="0" step="0.01"
+                           v-model.number="c._edit.gross"
+                           :disabled="feeModeLocal==='added'"
+                           :title="grossTooltipFromValues(c._edit.net, c._edit.gross)"
+                           :class="{ 'is-invalid': feeModeLocal==='included' && !Number.isFinite(Number(c._edit.gross)) }" />
+                    <div class="form-text" v-if="feeModeLocal==='added'">wird automatisch aus „Veranstalter“ + Gebühren berechnet</div>
                   </template>
-                  <template v-else>{{ formatPrice(c.price) }}</template>
+                  <template v-else>
+                    <span :title="grossTooltipForCat(c)">{{ formatPrice(c._view.gross) }}</span>
+                  </template>
                 </td>
+
+                <!-- Veranstalter (reiner Gewinn) -->
+                <td>
+                  <template v-if="c._mode==='edit'">
+                    <input class="form-control"
+                           type="number" min="0" step="0.01"
+                           v-model.number="c._edit.net"
+                           :disabled="feeModeLocal==='included'"
+                           :title="netTooltipFromValues(c._edit.net, c._edit.gross)"
+                           :class="{ 'is-invalid': feeModeLocal==='added' && !Number.isFinite(Number(c._edit.net)) }" />
+                    <div class="form-text" v-if="feeModeLocal==='included'">wird automatisch aus Verkaufspreis − Gebühren berechnet</div>
+                  </template>
+                  <template v-else>
+                    <span :title="netTooltipForCat(c)">{{ formatPrice(c._view.net) }}</span>
+                  </template>
+                </td>
+
                 <td>
                   <template v-if="c._mode==='edit'">
                     <input class="form-control" type="number" min="0" step="1" v-model.number="c._edit.stock" />
                   </template>
                   <template v-else>{{ c.stock }}</template>
                 </td>
+
                 <td>
                   <template v-if="c._mode==='edit'">
                     <input class="form-control" v-model="c._edit.code" />
                   </template>
                   <template v-else>{{ c.code || '—' }}</template>
                 </td>
+
                 <td>
-                  <span class="badge bg-light text-dark">
-                    {{ availableOf(c) }}
-                  </span>
+                  <span class="badge bg-light text-dark">{{ availableOf(c) }}</span>
                 </td>
+
                 <td class="text-end">
                   <div class="btn-group">
                     <template v-if="c._mode==='edit'">
-                      <button class="btn btn-sm btn-outline-primary" :disabled="!isDirty(c)" @click="saveExisting(c)">
-                        <i class="bi bi-save"></i>
-                      </button>
-                      <button class="btn btn-sm btn-outline-secondary" @click="cancelEdit(c)">
-                        <i class="bi bi-x-circle"></i>
-                      </button>
-                      <button class="btn btn-sm btn-outline-danger" @click="delExisting(c)">
-                        <i class="bi bi-trash"></i>
-                      </button>
+                      <button class="btn btn-sm btn-outline-primary" :disabled="!isDirty(c)" @click="saveExisting(c)"><i class="bi bi-save"></i></button>
+                      <button class="btn btn-sm btn-outline-secondary" @click="cancelEdit(c)"><i class="bi bi-x-circle"></i></button>
+                      <button class="btn btn-sm btn-outline-danger" @click="delExisting(c)"><i class="bi bi-trash"></i></button>
                     </template>
                     <template v-else>
-                      <button class="btn btn-sm btn-outline-primary" @click="startEdit(c)">
-                        <i class="bi bi-pencil"></i> Bearbeiten
-                      </button>
+                      <button class="btn btn-sm btn-outline-primary" @click="startEdit(c)"><i class="bi bi-pencil"></i> Bearbeiten</button>
                     </template>
                   </div>
                 </td>
@@ -120,22 +139,40 @@
               <tr v-for="(r,i) in newRows" :key="`new-${i}`" class="table-row-new">
                 <td class="text-muted">neu</td>
                 <td><input class="form-control" v-model="r.name" placeholder="z. B. Stehplatz" required/></td>
-                <td><input class="form-control" type="number" min="0" step="0.01" v-model.number="r.price" required/></td>
+
+                <!-- Verkaufspreis -->
+                <td>
+                  <input class="form-control" type="number" min="0" step="0.01"
+                         v-model.number="r.gross"
+                         :disabled="feeModeLocal==='added'"
+                         :title="grossTooltipForRow(r)"
+                         :required="feeModeLocal==='included'"/>
+                  <div class="form-text" v-if="feeModeLocal==='added'">berechnet</div>
+                </td>
+
+                <!-- Veranstalter -->
+                <td>
+                  <input class="form-control" type="number" min="0" step="0.01"
+                         v-model.number="r.net"
+                         :disabled="feeModeLocal==='included'"
+                         :title="netTooltipForRow(r)"
+                         :required="feeModeLocal==='added'"/>
+                  <div class="form-text" v-if="feeModeLocal==='included'">berechnet</div>
+                </td>
+
                 <td><input class="form-control" type="number" min="0" step="1" v-model.number="r.stock" required/></td>
                 <td><input class="form-control" v-model="r.code" placeholder="(optional)"/></td>
                 <td><span class="badge bg-secondary-subtle text-secondary">—</span></td>
                 <td class="text-end">
                   <div class="btn-group">
-                    <button class="btn btn-sm btn-outline-danger" @click="newRows.splice(i,1)">
-                      <i class="bi bi-trash"></i>
-                    </button>
+                    <button class="btn btn-sm btn-outline-danger" @click="newRows.splice(i,1)"><i class="bi bi-trash"></i></button>
                   </div>
                 </td>
               </tr>
 
               <!-- FOOTER ADD -->
               <tr>
-                <td colspan="7" class="text-center">
+                <td colspan="8" class="text-center">
                   <button class="btn btn-outline-primary" @click="addNewRow">
                     <i class="bi bi-plus-lg"></i> Kategorie hinzufügen
                   </button>
@@ -155,9 +192,7 @@
         <!-- JSON-IMPORT -->
         <div class="card border-0 border-top mt-4">
           <div class="card-header d-flex align-items-center justify-content-between">
-            <div class="fw-semibold">
-              <i class="bi bi-braces"></i> JSON-Import (manuell)
-            </div>
+            <div class="fw-semibold"><i class="bi bi-braces"></i> JSON-Import (manuell)</div>
             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#manualJsonImport">
               <i class="bi bi-chevron-expand"></i> Anzeigen
             </button>
@@ -165,15 +200,12 @@
           <div id="manualJsonImport" class="collapse">
             <div class="card-body">
               <p class="small text-muted mb-2">
-                Struktur: <code>[{ "id":123?, "code":"VIP"?, "name":"VIP", "price": 99.9, "stock": 50 }]</code>
+                Struktur: <code>[{ "id":123?, "code":"VIP"?, "name":"VIP", "price": 99.9, "stock": 50 }]</code><br>
+                Hinweis: Preis bezieht sich auf <em>{{ priceColSuffix }}</em>.
               </p>
               <div class="d-flex gap-2 mb-2">
-                <button class="btn btn-sm btn-outline-secondary" @click="exampleBulk">
-                  <i class="bi bi-braces"></i> Beispiel einfügen
-                </button>
-                <button class="btn btn-sm btn-outline-primary" @click="doBulkUpsert">
-                  <i class="bi bi-upload"></i> Übernehmen
-                </button>
+                <button class="btn btn-sm btn-outline-secondary" @click="exampleBulk"><i class="bi bi-braces"></i> Beispiel einfügen</button>
+                <button class="btn btn-sm btn-outline-primary" @click="doBulkUpsert"><i class="bi bi-upload"></i> Übernehmen</button>
               </div>
               <textarea class="form-control" rows="6" v-model="bulkText" placeholder='[{"code":"GA","name":"Stehplatz","price":25,"stock":200}]'></textarea>
             </div>
@@ -183,17 +215,15 @@
 
       <!-- TAB: ERSTELLEN + HOLD -->
       <section v-show="tab==='mint_hold'">
-        <!-- EXPLAINER -->
         <div class="alert" :class="isGA ? 'alert-light border' : 'alert-info'">
-          <div class="fw-semibold mb-1">
-            {{ isGA ? 'Tickets erstellen' : 'Tickets erstellen & Seats reservieren' }}
-          </div>
+          <div class="fw-semibold mb-1">{{ isGA ? 'Tickets erstellen' : 'Tickets erstellen & Seats reservieren' }}</div>
           <div class="small text-muted" v-if="isGA">
             Kein Sitzplan aktiv – <strong>Seat-Labels nicht nötig</strong>. Du kannst zusätzlich <strong>GA-Reservierungen</strong> mit E-Mail anlegen.
           </div>
           <div class="small text-muted" v-else>
             Mit Seatmap kannst du Seats gezielt reservieren (Hold) und einer <strong>E-Mail</strong> zuweisen.
           </div>
+          <div class="small text-muted mt-1">Preisangaben verstehen sich: <em>{{ priceColSuffix }}</em>.</div>
         </div>
 
         <!-- CREATE -->
@@ -205,9 +235,7 @@
                 <label class="form-label">Kategorie</label>
                 <select class="form-select" v-model.number="mint.category_id">
                   <option disabled :value="null">– Kategorie wählen –</option>
-                  <option v-for="c in categories" :key="c.id" :value="c.id">
-                    #{{ c.id }} – {{ c.name }} (frei: {{ availableOf(c) }})
-                  </option>
+                  <option v-for="c in categories" :key="c.id" :value="c.id">#{{ c.id }} – {{ c.name }} (frei: {{ availableOf(c) }})</option>
                 </select>
               </div>
               <div class="col-md-3">
@@ -219,9 +247,7 @@
                 <input class="form-control" v-model="mint.seat_label_prefix" placeholder="z. B. A"/>
               </div>
               <div class="col-md-auto">
-                <button class="btn btn-outline-primary w-100" @click="mintNow">
-                  <i class="bi bi-plus-circle"></i> Erstellen
-                </button>
+                <button class="btn btn-outline-primary w-100" @click="mintNow"><i class="bi bi-plus-circle"></i> Erstellen</button>
               </div>
             </div>
             <div class="small text-muted mt-2">
@@ -230,7 +256,7 @@
           </div>
         </div>
 
-        <!-- GA HOLD (auch im GA-Modus sichtbar) -->
+        <!-- GA HOLD -->
         <div class="card border mb-3" v-if="isGA">
           <div class="card-body">
             <h6 class="mb-3"><i class="bi bi-shield me-1"></i> Reservieren (GA)</h6>
@@ -257,13 +283,9 @@
             </div>
             <div class="row g-2 mt-3">
               <div class="col-md-6 d-grid">
-                <button class="btn btn-outline-primary" :disabled="!canCreateGAHold" @click="createGAHoldNow">
-                  <i class="bi bi-shield"></i> Hold anlegen
-                </button>
+                <button class="btn btn-outline-primary" :disabled="!canCreateGAHold" @click="createGAHoldNow"><i class="bi bi-shield"></i> Hold anlegen</button>
               </div>
-              <div class="col-md-6 small text-muted">
-                Reserviert Kontingent; läuft nach TTL ab, wenn kein Kauf erfolgt.
-              </div>
+              <div class="col-md-6 small text-muted">Reserviert Kontingent; läuft nach TTL ab, wenn kein Kauf erfolgt.</div>
             </div>
 
             <div v-if="lastGAHold.cart_id" class="alert alert-light border mt-3">
@@ -274,42 +296,29 @@
                   <span v-if="lastGAHold.assignee_email" class="badge bg-secondary ms-1">E-Mail: {{ lastGAHold.assignee_email }}</span>
                 </div>
                 <div class="btn-group mt-2 mt-sm-0">
-                  <button class="btn btn-sm btn-outline-secondary" @click="releaseGAHoldNow(lastGAHold.cart_id)">
-                    <i class="bi bi-x-circle"></i> Freigeben
-                  </button>
-                  <button class="btn btn-sm btn-outline-success" @click="issueGAHoldNow(lastGAHold.cart_id)">
-                    <i class="bi bi-check2-circle"></i> Ausstellen (gratis)
-                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" @click="releaseGAHoldNow(lastGAHold.cart_id)"><i class="bi bi-x-circle"></i> Freigeben</button>
+                  <button class="btn btn-sm btn-outline-success" @click="issueGAHoldNow(lastGAHold.cart_id)"><i class="bi bi-check2-circle"></i> Ausstellen (gratis)</button>
                 </div>
               </div>
               <div class="small mt-2">
                 {{ (lastGAHold.items||[]).map(i => `#${i.category_id} × ${i.qty} (${catName(i.category_id)})`).join(', ') }}
               </div>
 
-              <!-- Checkout-Link GA -->
               <div class="row g-2 align-items-center mt-2">
                 <div class="col-md-6 d-grid">
-                  <button class="btn btn-sm btn-outline-primary" @click="fetchGaCheckoutLink(lastGAHold.cart_id)">
-                    <i class="bi bi-link-45deg"></i> Checkout-Link
-                  </button>
+                  <button class="btn btn-sm btn-outline-primary" @click="fetchGaCheckoutLink(lastGAHold.cart_id)"><i class="bi bi-link-45deg"></i> Checkout-Link</button>
                 </div>
                 <div class="col-md-6" v-if="lastGAHold.checkout_url">
                   <div class="input-group input-group-sm">
                     <input class="form-control" :value="lastGAHold.checkout_url" readonly />
-                    <button class="btn btn-outline-secondary" @click="copyToClipboard(lastGAHold.checkout_url)">
-                      <i class="bi bi-clipboard"></i>
-                    </button>
-                    <a class="btn btn-outline-success" :href="lastGAHold.checkout_url" target="_blank" rel="noopener">
-                      <i class="bi bi-box-arrow-up-right"></i>
-                    </a>
+                    <button class="btn btn-outline-secondary" @click="copyToClipboard(lastGAHold.checkout_url)"><i class="bi bi-clipboard"></i></button>
+                    <a class="btn btn-outline-success" :href="lastGAHold.checkout_url" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i></a>
                   </div>
                 </div>
               </div>
 
               <div class="row g-2 mt-2">
-                <div class="col-md-6">
-                  <input class="form-control" v-model.trim="gaIssueEmail" type="email" placeholder="E-Mail fürs Ausstellen (optional)" />
-                </div>
+                <div class="col-md-6"><input class="form-control" v-model.trim="gaIssueEmail" type="email" placeholder="E-Mail fürs Ausstellen (optional)" /></div>
                 <div class="col-md-6 small text-muted">Wenn leer, wird die Hold-E-Mail (falls vorhanden) genutzt.</div>
               </div>
             </div>
@@ -338,12 +347,8 @@
                 <input class="form-control" type="number" min="1" v-model.number="seatHold.ttl_days" />
               </div>
               <div class="col-md-2 d-grid gap-2">
-                <button class="btn btn-outline-secondary" @click="checkSeatsStatus">
-                  <i class="bi bi-search"></i> Status
-                </button>
-                <button class="btn btn-outline-primary" :disabled="!canCreateHold" @click="createSeatHoldNow">
-                  <i class="bi bi-shield"></i> Hold
-                </button>
+                <button class="btn btn-outline-secondary" @click="checkSeatsStatus"><i class="bi bi-search"></i> Status</button>
+                <button class="btn btn-outline-primary" :disabled="!canCreateHold" @click="createSeatHoldNow"><i class="bi bi-shield"></i> Hold</button>
               </div>
             </div>
 
@@ -352,28 +357,20 @@
                 <label class="form-label">E-Mail (optional)</label>
                 <input class="form-control" type="email" v-model.trim="seatHold.email" placeholder="kunde@example.com" />
               </div>
-              <div class="col-md-8 small text-muted">
-                Wird beim Ausstellen als Käuferadresse genutzt (oder überschrieben, wenn unten explizit angegeben).
-              </div>
+              <div class="col-md-8 small text-muted">Wird beim Ausstellen als Käuferadresse genutzt (oder überschrieben, wenn unten explizit angegeben).</div>
             </div>
 
-            <!-- Status Chips -->
             <div v-if="seatsStatusMap && Object.keys(seatsStatusMap).length" class="mt-3">
               <div class="small fw-semibold mb-1">Seat-Status:</div>
               <div class="d-flex flex-wrap gap-2">
                 <span v-for="(st, lbl) in seatsStatusMap" :key="lbl"
                       class="badge"
-                      :class="{
-                        'bg-success': st==='free',
-                        'bg-warning text-dark': st==='reserved',
-                        'bg-danger': st==='sold'
-                      }">
+                      :class="{ 'bg-success': st==='free', 'bg-warning text-dark': st==='reserved', 'bg-danger': st==='sold' }">
                   {{ lbl }} • {{ st }}
                 </span>
               </div>
             </div>
 
-            <!-- Ergebnis / Aktionen -->
             <div v-if="lastHold.cart_id" class="alert alert-light border mt-3">
               <div class="d-flex flex-wrap align-items-center justify-content-between">
                 <div>
@@ -382,47 +379,31 @@
                   <span v-if="lastHold.assignee_email" class="badge bg-secondary ms-1">E-Mail: {{ lastHold.assignee_email }}</span>
                 </div>
                 <div class="btn-group mt-2 mt-sm-0">
-                  <button class="btn btn-sm btn-outline-secondary" @click="releaseSeatHoldSome(lastHold.cart_id)">
-                    <i class="bi bi-x-circle"></i> Alle freigeben
-                  </button>
-                  <button class="btn btn-sm btn-outline-success" @click="issueHoldSeats(lastHold.cart_id)">
-                    <i class="bi bi-check2-circle"></i> Hold ausstellen (gratis)
-                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" @click="releaseSeatHoldSome(lastHold.cart_id)"><i class="bi bi-x-circle"></i> Alle freigeben</button>
+                  <button class="btn btn-sm btn-outline-success" @click="issueHoldSeats(lastHold.cart_id)"><i class="bi bi-check2-circle"></i> Hold ausstellen (gratis)</button>
                 </div>
               </div>
-              <div class="small mt-2">
-                {{ (lastHold.items||[]).map(i => `${i.seat_label}`).join(', ') }}
-              </div>
+              <div class="small mt-2">{{ (lastHold.items||[]).map(i => `${i.seat_label}`).join(', ') }}</div>
 
-              <!-- Checkout-Link Seats -->
               <div class="row g-2 align-items-center mt-2">
                 <div class="col-md-6 d-grid">
-                  <button class="btn btn-sm btn-outline-primary" @click="fetchSeatCheckoutLink(lastHold.cart_id)">
-                    <i class="bi bi-link-45deg"></i> Checkout-Link
-                  </button>
+                  <button class="btn btn-sm btn-outline-primary" @click="fetchSeatCheckoutLink(lastHold.cart_id)"><i class="bi bi-link-45deg"></i> Checkout-Link</button>
                 </div>
                 <div class="col-md-6" v-if="lastHold.checkout_url">
                   <div class="input-group input-group-sm">
                     <input class="form-control" :value="lastHold.checkout_url" readonly />
-                    <button class="btn btn-outline-secondary" @click="copyToClipboard(lastHold.checkout_url)">
-                      <i class="bi bi-clipboard"></i>
-                    </button>
-                    <a class="btn btn-outline-success" :href="lastHold.checkout_url" target="_blank" rel="noopener">
-                      <i class="bi bi-box-arrow-up-right"></i>
-                    </a>
+                    <button class="btn btn-outline-secondary" @click="copyToClipboard(lastHold.checkout_url)"><i class="bi bi-clipboard"></i></button>
+                    <a class="btn btn-outline-success" :href="lastHold.checkout_url" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i></a>
                   </div>
                 </div>
               </div>
 
               <div class="row g-2 mt-2">
-                <div class="col-md-6">
-                  <input class="form-control" v-model.trim="seatIssueEmail" type="email" placeholder="E-Mail fürs Ausstellen (optional)" />
-                </div>
+                <div class="col-md-6"><input class="form-control" v-model.trim="seatIssueEmail" type="email" placeholder="E-Mail fürs Ausstellen (optional)" /></div>
                 <div class="col-md-6 small text-muted">Wenn leer, wird die Hold-E-Mail (falls vorhanden) genutzt.</div>
               </div>
             </div>
 
-            <!-- Manuelle Hold-Operationen -->
             <div class="row g-3 align-items-end mt-3">
               <div class="col-md-4">
                 <label class="form-label">Hold-ID (Cart)</label>
@@ -433,25 +414,15 @@
                 <input class="form-control" v-model="holdOps.labels" placeholder="A-1,A-2 (leer=alle)">
               </div>
               <div class="col-md-4 d-grid gap-2">
-                <button class="btn btn-outline-secondary" @click="releaseSeatHoldSome()">
-                  <i class="bi bi-x-circle"></i> Seats freigeben
-                </button>
-                <button class="btn btn-outline-success" @click="issueHoldSeats()">
-                  <i class="bi bi-check2-circle"></i> Hold ausstellen (gratis)
-                </button>
-                <button class="btn btn-outline-primary" @click="fetchManualCheckoutLink()">
-                  <i class="bi bi-link-45deg"></i> Checkout-Link holen
-                </button>
+                <button class="btn btn-outline-secondary" @click="releaseSeatHoldSome()"><i class="bi bi-x-circle"></i> Seats freigeben</button>
+                <button class="btn btn-outline-success" @click="issueHoldSeats()"><i class="bi bi-check2-circle"></i> Hold ausstellen (gratis)</button>
+                <button class="btn btn-outline-primary" @click="fetchManualCheckoutLink()"><i class="bi bi-link-45deg"></i> Checkout-Link holen</button>
               </div>
               <div class="col-12" v-if="manualCheckout.url">
                 <div class="input-group input-group-sm">
                   <input class="form-control" :value="manualCheckout.url" readonly />
-                  <button class="btn btn-outline-secondary" @click="copyToClipboard(manualCheckout.url)">
-                    <i class="bi bi-clipboard"></i>
-                  </button>
-                  <a class="btn btn-outline-success" :href="manualCheckout.url" target="_blank" rel="noopener">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                  </a>
+                  <button class="btn btn-outline-secondary" @click="copyToClipboard(manualCheckout.url)"><i class="bi bi-clipboard"></i></button>
+                  <a class="btn btn-outline-success" :href="manualCheckout.url" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i></a>
                 </div>
               </div>
             </div>
@@ -468,7 +439,6 @@
           </button>
         </div>
 
-        <!-- Filter & Sort -->
         <div class="row g-2 align-items-end mb-3">
           <div class="col-md-4">
             <label class="form-label">E-Mail enthält</label>
@@ -490,23 +460,16 @@
             </select>
           </div>
           <div class="col-md-2 d-flex gap-2">
-            <button class="btn btn-outline-secondary flex-fill" @click="applyTicketQuery">
-              <i class="bi bi-filter-circle"></i>
-            </button>
-            <button class="btn btn-outline-success flex-fill" @click="exportCsv">
-              <i class="bi bi-download"></i>
-            </button>
+            <button class="btn btn-outline-secondary flex-fill" @click="applyTicketQuery"><i class="bi bi-filter-circle"></i></button>
+            <button class="btn btn-outline-success flex-fill" @click="exportCsv"><i class="bi bi-download"></i></button>
           </div>
         </div>
 
-        <!-- Nur erzeugte (frei) -->
         <div class="row g-2 align-items-center mb-2">
           <div class="col-auto">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="onlyMinted" v-model="onlyMinted">
-              <label class="form-check-label" for="onlyMinted">
-                nur erzeugte (frei)
-              </label>
+              <label class="form-check-label" for="onlyMinted">nur erzeugte (frei)</label>
             </div>
           </div>
           <div class="col-auto small text-muted" v-if="onlyMinted">
@@ -514,7 +477,6 @@
           </div>
         </div>
 
-        <!-- Paging -->
         <div class="row g-2 align-items-end mb-2">
           <div class="col-md-2">
             <label class="form-label">Limit</label>
@@ -526,13 +488,10 @@
           </div>
           <div class="col-md-2">
             <label class="form-label d-block">&nbsp;</label>
-            <button class="btn btn-outline-secondary w-100" @click="loadTickets">
-              <i class="bi bi-arrow-repeat"></i> Laden
-            </button>
+            <button class="btn btn-outline-secondary w-100" @click="loadTickets"><i class="bi bi-arrow-repeat"></i> Laden</button>
           </div>
         </div>
 
-        <!-- Tabelle -->
         <div class="table-responsive">
           <table class="table align-middle">
             <thead class="table-light">
@@ -558,12 +517,8 @@
                 <td>{{ formatDate(t.created_at) }}</td>
                 <td class="text-end">
                   <div class="btn-group">
-                    <button class="btn btn-sm btn-outline-secondary" @click="openViewer(t)">
-                      <i class="bi bi-eye"></i> Anzeigen
-                    </button>
-                    <button v-if="!isGA" class="btn btn-sm btn-outline-primary" @click="openEditor(t)">
-                      <i class="bi bi-pencil"></i> Edit
-                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" @click="openViewer(t)"><i class="bi bi-eye"></i> Anzeigen</button>
+                    <button v-if="!isGA" class="btn btn-sm btn-outline-primary" @click="openEditor(t)"><i class="bi bi-pencil"></i> Edit</button>
                   </div>
                 </td>
               </tr>
@@ -574,7 +529,6 @@
           </table>
         </div>
 
-        <!-- Paging Controls -->
         <div class="d-flex justify-content-between align-items-center mt-2">
           <button class="btn btn-sm btn-outline-secondary" :disabled="paging.offset<=0"
                   @click="paging.offset = Math.max(0, paging.offset - paging.limit); loadTickets();">
@@ -587,168 +541,20 @@
         </div>
       </section>
 
-      <!-- TAB: SUMMARY -->
-      <section v-show="tab==='summary'">
-        <div class="d-flex align-items-center justify-content-between">
-          <h6 class="mb-2">Übersicht</h6>
-          <div class="btn-group">
-            <button class="btn btn-sm btn-outline-secondary" @click="loadSummary">
-              <i class="bi bi-arrow-repeat"></i> Aktualisieren
-            </button>
-            <button class="btn btn-sm btn-success" @click="publish">
-              <i class="bi bi-megaphone"></i> Event veröffentlichen
-            </button>
-          </div>
-        </div>
-
-        <div v-if="summary" class="row g-3">
-          <div class="col-12">
-            <div class="alert alert-light border">
-              <div class="d-flex gap-4 flex-wrap mb-1">
-                <div><strong>Erzeugt:</strong> {{ summary.totals.minted }}</div>
-                <div><strong>Sold:</strong> {{ summary.totals.sold }}</div>
-                <div><strong>Reserved:</strong> {{ summary.totals.reserved }}</div>
-                <div><strong>Available:</strong> {{ summary.totals.available }}</div>
-              </div>
-              <div class="small text-muted">Event ID: {{ summary.event_id }}</div>
-            </div>
-          </div>
-
-          <div class="col-12">
-            <div class="table-responsive">
-              <table class="table align-middle">
-                <thead class="table-light">
-                  <tr>
-                    <th style="width:140px">Kategorie-ID</th>
-                    <th>Erzeugt</th>
-                    <th>Sold</th>
-                    <th>Reserved</th>
-                    <th>Available</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(row, cid) in summary.per_category" :key="cid">
-                    <td class="text-muted">#{{ cid }}</td>
-                    <td>{{ row.minted }}</td>
-                    <td>{{ row.sold }}</td>
-                    <td>{{ row.reserved }}</td>
-                    <td>{{ row.available }}</td>
-                  </tr>
-                  <tr v-if="!Object.keys(summary.per_category||{}).length">
-                    <td colspan="5" class="text-muted">Keine Kategorien verfügbar.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="text-muted">Noch keine Daten – <a href="#" @click.prevent="loadSummary">laden</a>.</div>
-      </section>
-
       <pre v-if="debug" class="small mt-4 bg-light p-2 border rounded">{{ debugText }}</pre>
     </div>
   </div>
 
-  <!-- Ticket-Editor (Modal) -->
-  <div class="modal fade show" tabindex="-1" style="display:block" v-if="editor && editor.open" @click.self="closeEditor">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h6 class="modal-title"><i class="bi bi-pencil-square me-1"></i> Ticket-Editor</h6>
-          <button type="button" class="btn-close" @click="closeEditor"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-              <label class="form-label">Ticket-ID</label>
-              <input class="form-control" v-model.number="editor.ticketId" placeholder="z. B. 1234">
-            </div>
-            <div class="col-md-3">
-              <button class="btn btn-outline-secondary w-100" @click="loadTicketIntoEditor">
-                <i class="bi bi-search"></i> Laden
-              </button>
-            </div>
-          </div>
+  <!-- Ticket-Editor (Modal) – Placeholder -->
+  <div class="modal fade show" tabindex="-1" style="display:block" v-if="editor && editor.open" @click.self="closeEditor"></div>
 
-          <div v-if="editor.ticket" class="mt-3">
-            <div class="alert alert-light border">
-              <div><strong>Ticket #{{ editor.ticket.id }}</strong></div>
-              <div class="small text-muted">
-                Kategorie: {{ editor.ticket.category_name || catName(editor.ticket.category_id) }} • Seat: {{ editor.ticket.seat_label || '—' }} •
-                Status:
-                <span :class="['badge', editor.ticket.sold?'bg-success':'bg-light text-dark']">{{ editor.ticket.sold?'sold':'—' }}</span>
-                <span :class="['badge ms-1', editor.ticket.reserved?'bg-warning':'bg-light text-dark']">{{ editor.ticket.reserved?'reserved':'—' }}</span>
-              </div>
-            </div>
-
-            <div class="row g-3 align-items-end">
-              <div class="col-md-5">
-                <label class="form-label">Neues Seat-Label (gleiche Kategorie)</label>
-                <input class="form-control" v-model="editor.newSeat" placeholder="z. B. A-12">
-              </div>
-              <div class="col-md-3 d-grid">
-                <button class="btn btn-outline-secondary" @click="checkEditorSeatStatus">
-                  <i class="bi bi-search"></i> Seat-Status
-                </button>
-              </div>
-              <div class="col-md-4 d-grid">
-                <button class="btn btn-outline-primary" :disabled="!editor.newSeatOk" @click="doSwapSeatFromEditor">
-                  <i class="bi bi-arrow-left-right"></i> Seat tauschen
-                </button>
-              </div>
-            </div>
-
-            <div v-if="editor.seatStatus" class="small mt-2">
-              Neuer Sitz ist:
-              <span class="badge" :class="{
-                'bg-success': editor.seatStatus==='free',
-                'bg-warning text-dark': editor.seatStatus==='reserved',
-                'bg-danger': editor.seatStatus==='sold'
-              }">{{ editor.seatStatus }}</span>
-            </div>
-          </div>
-
-          <div v-else class="text-muted small mt-3">
-            Tipp: Wähle in der Ticketliste ein Ticket und klicke <em>Edit</em>, oder gib die Ticket-ID ein.
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline-secondary" @click="closeEditor">Schließen</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Ticket-Viewer (Modal) -->
-  <div class="modal fade show" tabindex="-1" style="display:block" v-if="viewer && viewer.open" @click.self="closeViewer">
-    <div class="modal-dialog modal-md modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h6 class="modal-title"><i class="bi bi-ticket-perforated me-1"></i> Ticket anzeigen</h6>
-          <button type="button" class="btn-close" @click="closeViewer"></button>
-        </div>
-        <div class="modal-body" v-if="viewer.ticket">
-          <div class="mb-2"><strong>#{{ viewer.ticket.id }}</strong></div>
-          <div class="small text-muted">
-            Kategorie: {{ viewer.ticket.category_name || catName(viewer.ticket.category_id) }}<br>
-            Seat: {{ viewer.ticket.seat_label || '—' }}<br>
-            E-Mail: {{ viewer.ticket.buyer_email || '—' }}<br>
-            Reserved: {{ viewer.ticket.reserved ? 'ja' : 'nein' }} • Sold: {{ viewer.ticket.sold ? 'ja':'nein' }}<br>
-            Erstellt: {{ formatDate(viewer.ticket.created_at) }}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline-secondary" @click="closeViewer">Schließen</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Ticket-Viewer (Modal) – Placeholder -->
+  <div class="modal fade show" tabindex="-1" style="display:block" v-if="viewer && viewer.open" @click.self="closeViewer"></div>
 
   <!-- Bootstrap Toasts -->
   <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1200">
     <div v-for="t in toasts" :key="t.id"
-         :class="['toast', 'show', 'align-items-center', 'border-0', toastVariantClass(t.variant)]"
+         :class="['toast','show','align-items-center','border-0', toastVariantClass(t.variant)]"
          role="alert" aria-live="assertive" aria-atomic="true">
       <div class="d-flex">
         <div class="toast-body">
@@ -761,90 +567,115 @@
 </template>
 
 <script setup>
+/* ============ Imports & Options ============ */
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-
 defineOptions({ name: 'TicketsMager' })
 
+/* ============ Props & Basic Mode ============ */
 const props = defineProps({
   eventId: { type: [Number, String], required: true },
-  mode: { type: String, default: null } // 'ga' | 'reserved'
+  mode: { type: String, default: null },       // 'ga' | 'reserved'
+  feeMode: { type: String, default: 'included' } // 'included' | 'added'
 })
-
-/**
- * Modus:
- * - Wenn props.mode === 'reserved' -> Sitzplan-Modus
- * - sonst GA
- */
 const isReserved = computed(() => (props.mode || '').toLowerCase() === 'reserved')
 const isGA = computed(() => !isReserved.value)
 
+/* ============ API ============ */
 const {
   listTicketCategories, patchTicketCategory, deleteTicketCategory,
   addTicketCategories, bulkUpsertCategories,
   mintTickets, listTickets, ticketsSummary,
   saleReadiness, publishEvent,
-  // Holds
   createGAHold, releaseGAHoldAll, issueFromGAHold,
   seatsStatus, createSeatHold, releaseSeatHold, issueFromSeatHold,
   listHolds, patchHold, holdCheckoutLink,
-  // admin
-  swapSeat
+  swapSeat, patchEvent
 } = useWorkspaceApi()
 
-// Tabs & debug
-const tab = ref('categories')
-const debug = ref(null)
-const debugText = computed(() => {
-  const v = debug.value
-  if (v == null) return ''
-  try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2) }
-  catch { return String(v) }
+/* ============ Fee Mode UI/State (kein Auto-Save) ============ */
+const normalizeFee = v => (v === 'added' ? 'added' : 'included')
+
+const lastSavedFeeMode = ref(normalizeFee(props.feeMode)) // bestätigte Server-/Parent-Quelle
+const feeModeLocal     = ref(lastSavedFeeMode.value)      // UI-Select
+const feeModeDirty     = ref(false)                       // nur wenn Nutzer geändert hat
+
+watch(feeModeLocal, (v) => {
+  feeModeDirty.value = normalizeFee(v) !== lastSavedFeeMode.value
+})
+watch(() => props.feeMode, (v) => {
+  const next = normalizeFee(v)
+  if (!feeModeDirty.value) {
+    lastSavedFeeMode.value = next
+    feeModeLocal.value     = next
+  }
 })
 
-/* =========================
- * Bootstrap Toasts
- * =======================*/
+const feeBadgeText   = computed(() => feeModeLocal.value === 'added' ? 'zzgl. Gebühren' : 'inkl. Gebühren')
+const feeBadgeClass  = computed(() => feeModeLocal.value === 'added' ? 'bg-warning text-dark' : 'bg-secondary')
+const priceColSuffix = computed(() => feeModeLocal.value === 'added' ? 'zzgl. Gebühren' : 'inkl. Gebühren')
+
+const emit = defineEmits(['fee-mode-changed','update:feeMode'])
+
+/* ============ Toasts ============ */
 const toasts = ref([])
 function showToast(variant='primary', message='', title=null, delay=4000){
   const id = Math.random().toString(36).slice(2)
   toasts.value.push({ id, variant, message, title })
   setTimeout(() => dismissToast(id), delay)
 }
-function dismissToast(id){
-  const i = toasts.value.findIndex(t => t.id === id)
-  if (i>=0) toasts.value.splice(i,1)
-}
+function dismissToast(id){ const i = toasts.value.findIndex(t => t.id === id); if (i>=0) toasts.value.splice(i,1) }
 function toastVariantClass(v){
-  return ({
-    success:'text-bg-success', danger:'text-bg-danger', warning:'text-bg-warning',
-    info:'text-bg-info', primary:'text-bg-primary', secondary:'text-bg-secondary'
-  }[v]||'text-bg-secondary')
+  return ({ success:'text-bg-success', danger:'text-bg-danger', warning:'text-bg-warning',
+    info:'text-bg-info', primary:'text-bg-primary', secondary:'text-bg-secondary' }[v]||'text-bg-secondary')
 }
-const toastOk=(m,t='OK')=>showToast('success',m,t)
-const toastErr=(m,t='Fehler')=>showToast('danger',m,t)
-const toastInfo=(m,t='Hinweis')=>showToast('info',m,t)
+const toastOk  = (m,t='OK')    => showToast('success', m, t)
+const toastErr = (m,t='Fehler')=> showToast('danger',  m, t)
+const toastInfo= (m,t='Hinweis')=>showToast('info',    m, t)
 
-/* =========================
- * Helper: URL bauen & kopieren
- * =======================*/
-function buildCheckoutUrl(path){
-  try { return new URL(path || '/', window.location.origin).toString() }
-  catch { return String(path || '/') }
-}
-async function copyToClipboard(text){
-  try { await navigator.clipboard.writeText(text); showToast('secondary','In Zwischenablage kopiert.') }
-  catch { toastInfo('Konnte nicht kopieren – bitte manuell.') }
-}
+/* ============ Utils ============ */
+function buildCheckoutUrl(path){ try { return new URL(path || '/', window.location.origin).toString() } catch { return String(path || '/') } }
+async function copyToClipboard(text){ try { await navigator.clipboard.writeText(text); showToast('secondary','In Zwischenablage kopiert.') } catch { toastInfo('Konnte nicht kopieren – bitte manuell.') } }
 
-/* =========================
- * Categories
- * =======================*/
+/* ============ Fees: Berechnung & Tooltip-Helfer ============ */
+const FEE_PCT = 0.075
+const FEE_FIXED = 0.50
+
+function calcFee(totalOrNet){ return +(totalOrNet * FEE_PCT + FEE_FIXED).toFixed(2) }
+function deriveFromStoredPrice(storedPrice){
+  const p = Number(storedPrice || 0)
+  if (feeModeLocal.value === 'added'){
+    const net   = p
+    const gross = +(net + calcFee(net)).toFixed(2)
+    return { net, gross }
+  } else {
+    const gross = p
+    const net   = +(gross - calcFee(gross)).toFixed(2)
+    return { net: Math.max(0, net), gross }
+  }
+}
+function toStoredPriceForMode(mode, { net, gross }){ return (mode === 'added') ? Number(net || 0) : Number(gross || 0) }
+function toStoredPrice(obj){ return toStoredPriceForMode(feeModeLocal.value, obj) }
+
+/* Tooltip-Formeln */
+const pctStr = () => (FEE_PCT * 100).toFixed(1) + '%'
+const clampNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0)
+function tooltipFromGross(g){ const gross=clampNum(g); const pctAmt=+(gross*FEE_PCT).toFixed(2); const fee=+(pctAmt+FEE_FIXED).toFixed(2); const net=+(gross-fee).toFixed(2);
+  return ['Modus: inkl. Gebühren',`Verkaufspreis: ${formatPrice(gross)}`,`Gebühren: ${formatPrice(fee)} = ${formatPrice(pctAmt)} (${pctStr()}) + ${formatPrice(FEE_FIXED)}`,`Veranstalter: ${formatPrice(net)}`,`Formel: net = gross - (gross * ${pctStr()} + ${formatPrice(FEE_FIXED)})`].join('\n') }
+function tooltipFromNet(n){ const net=clampNum(n); const pctAmt=+(net*FEE_PCT).toFixed(2); const fee=+(pctAmt+FEE_FIXED).toFixed(2); const gross=+(net+fee).toFixed(2);
+  return ['Modus: zzgl. Gebühren',`Veranstalter: ${formatPrice(net)}`,`Gebühren: ${formatPrice(fee)} = ${formatPrice(pctAmt)} (${pctStr()}) + ${formatPrice(FEE_FIXED)}`,`Verkaufspreis: ${formatPrice(gross)}`,`Formel: gross = net + (net * ${pctStr()} + ${formatPrice(FEE_FIXED)})`].join('\n') }
+const grossTooltipForCat = (c) => feeModeLocal.value === 'added' ? tooltipFromNet(c._view.net) : tooltipFromGross(c._view.gross)
+const netTooltipForCat   = (c) => feeModeLocal.value === 'added' ? tooltipFromNet(c._view.net) : tooltipFromGross(c._view.gross)
+const grossTooltipFromValues = (net,gross) => (feeModeLocal.value === 'added' ? tooltipFromNet(net) : tooltipFromGross(gross))
+const netTooltipFromValues   = (net,gross) => (feeModeLocal.value === 'added' ? tooltipFromNet(net) : tooltipFromGross(gross))
+
+/* ============ Categories ============ */
 const categories = ref([])
 const catMap = computed(() => Object.fromEntries((categories.value||[]).map(c => [Number(c.id), c.name])))
 const catName = (id) => catMap.value[Number(id)] || `#${id}`
 
 function primeEditable(c){
-  return { ...c, _mode:'view', _edit:{ name:c.name, price:c.price, stock:c.stock, code:c.code } }
+  const { net, gross } = deriveFromStoredPrice(c.price)
+  return { ...c, _mode:'view', _view:{ net, gross }, _edit:{ name:c.name, stock:c.stock, code:c.code, net, gross } }
 }
 async function loadCategories(){
   const { data, error } = await listTicketCategories(props.eventId)
@@ -852,16 +683,26 @@ async function loadCategories(){
   categories.value = (data || []).map(primeEditable)
 }
 function startEdit(c){ c._mode='edit' }
-function cancelEdit(c){ c._edit={ name:c.name, price:c.price, stock:c.stock, code:c.code }; c._mode='view' }
-function isDirty(c){ return ['name','price','stock','code'].some(k => c._edit[k] !== c[k]) }
+function cancelEdit(c){ c._edit = { name:c.name, stock:c.stock, code:c.code, net:c._view.net, gross:c._view.gross }; c._mode='view' }
+
+function isDirty(c){
+  const storedOrig   = Number(c.price || 0)
+  // WICHTIG: gegen zuletzt gespeicherten Modus vergleichen, damit bloßer UI-Moduswechsel nicht „dirty“ macht
+  const storedEdited = toStoredPriceForMode(lastSavedFeeMode.value, { net:c._edit.net, gross:c._edit.gross })
+  if (storedOrig !== storedEdited) return true
+  return ['name','stock','code'].some(k => c._edit[k] !== c[k])
+}
 function availableOf(c){
   const stock = c._mode==='edit' ? (c._edit.stock ?? 0) : (c.stock ?? 0)
   return Math.max(0, Number(stock) - (c.reserved_count||0) - (c.sold_count||0))
 }
+
 async function saveExisting(c){
   if (!isDirty(c)) return
   const payload = {}
-  for (const k of ['name','price','stock','code']) if (c._edit[k] !== c[k]) payload[k] = c._edit[k]
+  for (const k of ['name','stock','code']) if (c._edit[k] !== c[k]) payload[k] = c._edit[k]
+  const newStored = toStoredPriceForMode(lastSavedFeeMode.value, { net:c._edit.net, gross:c._edit.gross })
+  if (Number(c.price||0) !== newStored) payload.price = newStored
   const { data, error } = await patchTicketCategory(props.eventId, c.id, payload)
   if (error) { toastErr('Speichern fehlgeschlagen.'); return }
   Object.assign(c, primeEditable(data))
@@ -874,25 +715,110 @@ async function delExisting(c){
   if (error) { toastErr('Löschen fehlgeschlagen.'); return }
   await loadCategories(); toastOk('Kategorie gelöscht.')
 }
+
+/* New rows */
 const newRows = ref([])
-function addNewRow(){ newRows.value.push({ name:'', price:null, stock:null, code:null }) }
-const canSaveAny = computed(() =>
-  newRows.value.some(r => r.name?.trim() && Number.isFinite(Number(r.price)) && Number.isFinite(Number(r.stock))) ||
-  categories.value.some(c => c._mode==='edit' && isDirty(c))
-)
+function addNewRow(){ newRows.value.push({ name:'', stock:null, code:null, net:null, gross:null }) }
+
+/* Live-Berechnung während der Eingabe/Änderung (Vorschau im aktuellen UI-Modus) */
+watch(categories, (arr) => {
+  (arr||[]).forEach(c => {
+    if (c._mode!=='edit') return
+    if (feeModeLocal.value === 'added'){
+      const net = Number(c._edit.net || 0)
+      c._edit.gross = +(net + calcFee(net)).toFixed(2)
+    } else {
+      const gross = Number(c._edit.gross || 0)
+      c._edit.net = +(gross - calcFee(gross)).toFixed(2)
+      if (c._edit.net < 0) c._edit.net = 0
+    }
+  })
+}, { deep:true })
+watch(newRows, (arr) => {
+  (arr||[]).forEach(r => {
+    if (feeModeLocal.value === 'added'){
+      const net = Number(r.net || 0)
+      r.gross = +(net + calcFee(net)).toFixed(2)
+    } else {
+      const gross = Number(r.gross || 0)
+      r.net = +(gross - calcFee(gross)).toFixed(2)
+      if (r.net < 0) r.net = 0
+    }
+  })
+}, { deep:true })
+
+/* Save-Bar aktiv, wenn Fee-Mode geändert ODER Edits/Neuanlagen vorhanden */
+const canSaveAny = computed(() => {
+  const createOk = newRows.value.some(r =>
+    r.name?.trim() &&
+    Number.isFinite(Number(r.stock)) &&
+    (feeModeLocal.value==='added' ? Number.isFinite(Number(r.net)) : Number.isFinite(Number(r.gross)))
+  )
+  const editsOk = categories.value.some(c => c._mode==='edit' && isDirty(c))
+  return feeModeDirty.value || createOk || editsOk
+})
+
+/* ============ Speichern: zuerst FeeMode, dann Kategorien (ein Button) ============ */
+const savingFee = ref(false)
+
 async function saveAll(){
-  for (const c of categories.value.filter(c => c._mode==='edit' && isDirty(c))) await saveExisting(c)
+  // 1) Fee-Mode zuerst patchen, falls geändert
+  if (feeModeDirty.value){
+    try{
+      savingFee.value = true
+      const next = normalizeFee(feeModeLocal.value)
+      const { error } = await patchEvent(props.eventId, { fee_mode: next })
+      if (error) throw error
+
+      lastSavedFeeMode.value = next
+      feeModeLocal.value     = next
+      feeModeDirty.value     = false
+
+      emit('fee-mode-changed', next)
+      emit('update:feeMode',   next)
+
+      toastOk('Gebühren-Modus gespeichert.')
+      // Anzeige neu ableiten
+      categories.value = (categories.value||[]).map(primeEditable)
+    } catch(e){
+      feeModeLocal.value = lastSavedFeeMode.value
+      feeModeDirty.value = false
+      savingFee.value = false
+      toastErr('Konnte Gebühren-Modus nicht speichern.')
+      return
+    } finally {
+      savingFee.value = false
+    }
+  }
+
+  // 2) bestehende Edits speichern
+  for (const c of categories.value.filter(c => c._mode==='edit' && isDirty(c))) {
+    // eslint-disable-next-line no-await-in-loop
+    await saveExisting(c)
+  }
+
+  // 3) neue Kategorien anlegen (unter dem aktuell gespeicherten Modus)
   const creates = newRows.value
-    .filter(r => r.name?.trim() && Number.isFinite(Number(r.price)) && Number.isFinite(Number(r.stock)))
-    .map(r => ({ name:r.name.trim(), price:Number(r.price), stock:Number(r.stock), code:r.code || null }))
+    .filter(r => r.name?.trim() && Number.isFinite(Number(r.stock)) &&
+      (feeModeLocal.value==='added' ? Number.isFinite(Number(r.net)) : Number.isFinite(Number(r.gross))))
+    .map(r => ({
+      name: r.name.trim(),
+      stock: Number(r.stock),
+      code: r.code || null,
+      price: toStoredPriceForMode(lastSavedFeeMode.value, { net:Number(r.net||0), gross:Number(r.gross||0) })
+    }))
   if (creates.length){
     const { error } = await addTicketCategories(props.eventId, creates)
     if (error) { toastErr('Fehler beim Hinzufügen.'); return }
-    newRows.value = []; toastOk('Neue Kategorie(n) hinzugefügt.')
+    newRows.value = []
+    toastOk('Neue Kategorie(n) hinzugefügt.')
   }
-  await loadCategories(); toastOk('Änderungen gespeichert.')
+
+  await loadCategories()
+  toastOk('Änderungen gespeichert.')
 }
-// Bulk
+
+/* ============ Bulk JSON ============ */
 const bulkText = ref('')
 function exampleBulk(){
   bulkText.value = JSON.stringify([
@@ -908,17 +834,12 @@ async function doBulkUpsert(){
   await loadCategories(); toastOk('Bulk-Änderungen übernommen.')
 }
 
-/* =========================
- * Mint / Holds
- * =======================*/
+/* ============ Mint / Holds ============ */
 const mint = reactive({ category_id: null, quantity: 1, seat_label_prefix: '' })
 async function mintNow(){
   if (!mint.category_id || !mint.quantity) return
-  const body = {
-    category_id: Number(mint.category_id),
-    quantity: Number(mint.quantity),
-    seat_label_prefix: isGA.value ? null : (mint.seat_label_prefix || null)
-  }
+  const body = { category_id:Number(mint.category_id), quantity:Number(mint.quantity),
+                 seat_label_prefix: isGA.value ? null : (mint.seat_label_prefix || null) }
   const { data, error } = await mintTickets(props.eventId, body)
   if (error) { toastErr('Erstellen fehlgeschlagen.'); return }
   tab.value='tickets'; paging.offset=0
@@ -927,27 +848,19 @@ async function mintNow(){
   toastOk('Tickets erstellt.')
 }
 
-// GA-Hold
+/* GA Hold */
 const gaHold = reactive({ category_id: null, qty: 1, ttl_days: 30, email: '' })
 const canCreateGAHold = computed(() => !!gaHold.category_id && gaHold.qty>0)
 const lastGAHold = reactive({ cart_id: null, reserved_until: null, items: [], assignee_email: null, checkout_url: null })
 const gaIssueEmail = ref('')
 async function createGAHoldNow(){
   if (!canCreateGAHold.value) return
-  const body = {
-    items: [{ category_id: Number(gaHold.category_id), qty: Number(gaHold.qty) }],
-    ttl_days: Number(gaHold.ttl_days || 30),
-    assignee_email: gaHold.email?.trim() || null
-  }
+  const body = { items:[{ category_id:Number(gaHold.category_id), qty:Number(gaHold.qty) }],
+                 ttl_days:Number(gaHold.ttl_days || 30), assignee_email: gaHold.email?.trim() || null }
   const { data, error } = await createGAHold(props.eventId, body)
   if (error){ toastErr('GA Hold fehlgeschlagen.'); return }
-  Object.assign(lastGAHold, {
-    cart_id: data?.cart_id ?? null,
-    reserved_until: data?.reserved_until ?? null,
-    items: data?.items ?? [],
-    assignee_email: data?.assignee_email ?? null,
-    checkout_url: null
-  })
+  Object.assign(lastGAHold, { cart_id:data?.cart_id ?? null, reserved_until:data?.reserved_until ?? null,
+                              items:data?.items ?? [], assignee_email:data?.assignee_email ?? null, checkout_url:null })
   await Promise.allSettled([loadCategories(), loadSummary()])
   toastOk(`GA Hold erstellt (Cart #${lastGAHold.cart_id}).`)
 }
@@ -961,9 +874,7 @@ async function releaseGAHoldNow(cartId){
 }
 async function issueGAHoldNow(cartId){
   if (!cartId) return
-  const body = {}
-  const email = gaIssueEmail.value?.trim()
-  if (email) body.assignee_email = email
+  const body = {}; const email = gaIssueEmail.value?.trim(); if (email) body.assignee_email = email
   const { data, error } = await issueFromGAHold(props.eventId, Number(cartId), body)
   if (error){ toastErr('GA Hold ausstellen fehlgeschlagen.'); return }
   Object.assign(lastGAHold, { cart_id:null, reserved_until:null, items:[], assignee_email:null, checkout_url:null })
@@ -978,7 +889,7 @@ async function fetchGaCheckoutLink(cartId){
   toastOk('Checkout-Link bereit.')
 }
 
-// Seats-Hold
+/* Seat Holds */
 const seatHold = reactive({ category_id: null, labelsRaw: '', ttl_days: 30, email:'' })
 const seatsStatusMap = ref({})
 const lastHold = reactive({ cart_id: null, reserved_until: null, items: [], assignee_email: null, checkout_url: null })
@@ -1000,20 +911,12 @@ async function checkSeatsStatus(){
 async function createSeatHoldNow(){
   const labels = parseLabels(seatHold.labelsRaw)
   if (!seatHold.category_id || !labels.length) return
-  const body = {
-    items: [{ category_id: Number(seatHold.category_id), seat_labels: labels }],
-    ttl_days: Number(seatHold.ttl_days || 30),
-    assignee_email: seatHold.email?.trim() || null
-  }
+  const body = { items:[{ category_id:Number(seatHold.category_id), seat_labels: labels }],
+                 ttl_days:Number(seatHold.ttl_days || 30), assignee_email: seatHold.email?.trim() || null }
   const { data, error } = await createSeatHold(props.eventId, body)
   if (error){ toastErr('Seat Hold fehlgeschlagen.'); return }
-  Object.assign(lastHold, {
-    cart_id: data?.cart_id ?? null,
-    reserved_until: data?.reserved_until ?? null,
-    items: data?.items ?? [],
-    assignee_email: data?.assignee_email ?? null,
-    checkout_url: null
-  })
+  Object.assign(lastHold, { cart_id:data?.cart_id ?? null, reserved_until:data?.reserved_until ?? null,
+                            items:data?.items ?? [], assignee_email:data?.assignee_email ?? null, checkout_url:null })
   await Promise.allSettled([loadCategories(), loadSummary()])
   toastOk(`Seat Hold erstellt (Cart #${lastHold.cart_id}).`)
 }
@@ -1032,9 +935,7 @@ async function releaseSeatHoldSome(cartIdOverride=null){
 const seatIssueEmail = ref('')
 async function issueHoldSeats(cartIdOverride=null){
   const cid = Number(cartIdOverride ?? holdOps.cart_id); if (!cid) return
-  const body = {}
-  const email = seatIssueEmail.value?.trim() || lastHold.assignee_email || null
-  if (email) body.assignee_email = email
+  const body = {}; const email = seatIssueEmail.value?.trim() || lastHold.assignee_email || null; if (email) body.assignee_email = email
   const { data, error } = await issueFromSeatHold(props.eventId, cid, body)
   if (error){ toastErr('Hold ausstellen fehlgeschlagen.'); return }
   if (cid === lastHold.cart_id) { Object.assign(lastHold, { cart_id:null, items:[], assignee_email:null, checkout_url:null }) }
@@ -1050,7 +951,7 @@ async function fetchSeatCheckoutLink(cartId){
   toastOk('Checkout-Link bereit.')
 }
 
-// Manuell: Checkout-Link
+/* Manuell: Checkout-Link */
 const manualCheckout = reactive({ url: null })
 async function fetchManualCheckoutLink(){
   const cid = Number(holdOps.cart_id); if (!cid) return
@@ -1060,9 +961,7 @@ async function fetchManualCheckoutLink(){
   toastOk('Checkout-Link bereit.')
 }
 
-/* =========================
- * Tickets list
- * =======================*/
+/* ============ Tickets list ============ */
 const tickets = ref([])
 const paging = reactive({ limit: 100, offset: 0 })
 const filter = reactive({ reserved: null, sold: null })
@@ -1070,18 +969,14 @@ const onlyMinted = ref(false)
 const prevFilter = reactive({ reserved: null, sold: null })
 watch(onlyMinted, (v) => {
   if (v) { prevFilter.reserved=filter.reserved; prevFilter.sold=filter.sold; filter.reserved=false; filter.sold=false }
-  else { filter.reserved=prevFilter.reserved; filter.sold=prevFilter.sold }
+  else  { filter.reserved=prevFilter.reserved; filter.sold=prevFilter.sold }
 })
-
 const ticketFilters = reactive({ email: '' })
 const ticketSort = reactive({ by: 'created_at', dir: 'desc' })
 function applyTicketQuery(){ paging.offset=0; loadTickets() }
 async function loadTickets(){
-  const q = {
-    limit: Math.min(Number(paging.limit||100), 1000),
-    offset: Math.max(Number(paging.offset||0), 0),
-    sort_by: ticketSort.by, sort_dir: ticketSort.dir
-  }
+  const q = { limit: Math.min(Number(paging.limit||100), 1000), offset: Math.max(Number(paging.offset||0), 0),
+              sort_by: ticketSort.by, sort_dir: ticketSort.dir }
   if (onlyMinted.value) { q.reserved=false; q.sold=false }
   else {
     if (filter.reserved !== null) q.reserved = filter.reserved
@@ -1093,9 +988,7 @@ async function loadTickets(){
   tickets.value = data || []
 }
 
-/* =========================
- * Summary / misc
- * =======================*/
+/* ============ Summary / misc ============ */
 const summary = ref(null)
 async function loadSummary(){
   const { data, error } = await ticketsSummary(props.eventId)
@@ -1107,6 +1000,12 @@ async function publish(){
   if (error){ toastErr('Publish fehlgeschlagen.'); return }
   toastOk('Event veröffentlicht.')
 }
+const tab = ref('categories')
+const debug = ref(null)
+const debugText = computed(() => {
+  const v = debug.value; if (v == null) return ''
+  try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2) } catch { return String(v) }
+})
 async function checkReady(){
   const { data, error } = await saleReadiness(props.eventId)
   if (error){ toastErr('Prüfung fehlgeschlagen.'); return }
@@ -1114,16 +1013,9 @@ async function checkReady(){
   showToast('secondary','Readiness geprüft.')
 }
 
-/* =========================
- * Ticket-Editor (Seat Switch)
- * =======================*/
+/* ============ Ticket-Editor / Viewer ============ */
 const editor = ref({ open:false, ticketId:null, ticket:null, newSeat:'', seatStatus:null, newSeatOk:false })
-function openEditor(row=null){
-  editor.value.open=true
-  editor.value.ticketId = row ? row.id : null
-  editor.value.ticket   = row || null
-  editor.value.newSeat=''; editor.value.seatStatus=null; editor.value.newSeatOk=false
-}
+function openEditor(row=null){ editor.value.open=true; editor.value.ticketId = row ? row.id : null; editor.value.ticket = row || null; editor.value.newSeat=''; editor.value.seatStatus=null; editor.value.newSeatOk=false }
 function closeEditor(){ editor.value.open=false }
 function findTicketInLocal(id){ id=Number(id); return (tickets.value||[]).find(t => Number(t.id)===id) || null }
 async function loadTicketIntoEditor(){
@@ -1152,15 +1044,11 @@ async function doSwapSeatFromEditor(){
   const updated=findTicketInLocal(editor.value.ticket.id); if (updated) editor.value.ticket=updated
   toastOk('Sitzplatz getauscht.')
 }
-
-/* =========================
- * Ticket-Viewer (Anzeigen)
- * =======================*/
 const viewer = ref({ open:false, ticket:null })
 function openViewer(row){ viewer.value={ open:true, ticket:row } }
 function closeViewer(){ viewer.value.open=false }
 
-// Utils
+/* ============ Utils (formatting) ============ */
 function formatDate(v){
   if (!v) return '—'
   const d = new Date(v); if (isNaN(d)) return '—'
@@ -1170,33 +1058,12 @@ function formatDate(v){
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
 }
-function formatPrice(p){
-  const n = Number(p); if (!Number.isFinite(n)) return '—'
-  return new Intl.NumberFormat('de-DE', { style:'currency', currency:'EUR' }).format(n)
-}
-function exportCsv(){
-  const rows=tickets.value||[]
-  if (!rows.length){ toastInfo('Keine Daten zum Export.'); return }
-  const headers=['id','category_id','category_name','buyer_email','seat_label','reserved','sold','created_at']
-  const csv=[
-    headers.join(','),
-    ...rows.map(t => [
-      t.id, t.category_id, (t.category_name||catName(t.category_id)), (t.buyer_email||''),
-      (t.seat_label||''), (t.reserved?1:0), (t.sold?1:0), t.created_at
-    ].map(v => `"${String(v).replaceAll('"','""')}"`).join(','))
-  ].join('\n')
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'})
-  const url=URL.createObjectURL(blob)
-  const a=document.createElement('a'); a.href=url; a.download=`tickets-${props.eventId}.csv`
-  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
-  showToast('secondary','CSV exportiert.')
-}
+function formatPrice(p){ const n = Number(p); if (!Number.isFinite(n)) return '—'
+  return new Intl.NumberFormat('de-DE', { style:'currency', currency:'EUR' }).format(n) }
 
-// Initial load
+/* ============ Initial Load & Reactions ============ */
 async function loadAll(){ await Promise.allSettled([loadCategories(), loadTickets(), loadSummary()]) }
 onMounted(() => { loadAll() })
-
-// Re-load bei Event-Wechsel
 watch(() => props.eventId, () => { loadAll() })
 </script>
 

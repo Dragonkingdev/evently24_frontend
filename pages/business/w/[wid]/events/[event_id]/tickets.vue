@@ -1,3 +1,4 @@
+<!-- pages/business/w/[wid]/events/[event_id]/tickets.vue -->
 <template>
   <div>
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -21,11 +22,16 @@
           <div class="alert alert-light border">
             <div class="fw-semibold mb-1">General Admission</div>
             <div class="small text-muted">
-              Kein Sitzplan aktiv – <strong>keine Seat-Labels nötig</strong>.  
+              Kein Sitzplan aktiv – <strong>keine Seat-Labels nötig</strong>.
               Tickets können direkt <strong>erstellt</strong> werden. Reservierungen sind hier nicht erforderlich.
             </div>
           </div>
-          <TicketsManager :event-id="eventId" mode="ga" />
+          <TicketsManager
+            :event-id="eventId"
+            mode="ga"
+            :fee-mode="ev?.fee_mode || 'included'"
+            @update:feeMode="ev.fee_mode = $event"
+          />
         </template>
 
         <template v-else>
@@ -39,7 +45,12 @@
               </div>
             </div>
           </div>
-          <TicketsManager :event-id="eventId" mode="reserved" />
+          <TicketsManager
+            :event-id="eventId"
+            mode="reserved"
+            :fee-mode="ev?.fee_mode || 'included'"
+            @fee-mode-changed="onFeeModeChanged"
+          />
         </template>
       </div>
     </div>
@@ -71,4 +82,9 @@ const isReserved = computed(() => {
   return !!ev.value?.seatmap_id
 })
 const isGA = computed(() => !isReserved.value)
+
+/** Wird vom TicketsManager nach erfolgreichem Patch gefeuert */
+function onFeeModeChanged (mode) {
+  if (data.value) data.value.fee_mode = mode
+}
 </script>

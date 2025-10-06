@@ -40,8 +40,8 @@ function findStepForError (err) {
   // Extern: Ticket-URL -> Listing
   if (fields.has('external_ticket_url')) return 2
 
-  // ListingMode-Konflikt
-  if (fields.has('listing_mode')) return 2
+  // ListingMode-Konflikt ODER Gebührenmodus -> Listing
+  if (fields.has('listing_mode') || fields.has('fee_mode')) return 2
 
   // Ticket-bezogenes (zur Sicherheit) -> Tickets
   if (['ticket_sale_mode','seatmap_id'].some(f => fields.has(f))) return 3
@@ -49,6 +49,7 @@ function findStepForError (err) {
   // Fallback: Basis
   return 1
 }
+
 
 async function submit(body){
   const { createEvent, parseApiError } = api
