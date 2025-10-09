@@ -1,6 +1,6 @@
 <!-- components/business/workspaces/events/TicketsManager.vue -->
 <template>
-  <div class="card shadow-sm">
+  <div class="card">
     <!-- Header -->
     <div class="card-header d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -595,9 +595,9 @@ const {
 /* ============ Fee Mode UI/State (kein Auto-Save) ============ */
 const normalizeFee = v => (v === 'added' ? 'added' : 'included')
 
-const lastSavedFeeMode = ref(normalizeFee(props.feeMode)) // bestätigte Server-/Parent-Quelle
-const feeModeLocal     = ref(lastSavedFeeMode.value)      // UI-Select
-const feeModeDirty     = ref(false)                       // nur wenn Nutzer geändert hat
+const lastSavedFeeMode = ref(normalizeFee(props.feeMode))
+const feeModeLocal     = ref(lastSavedFeeMode.value)
+const feeModeDirty     = ref(false)
 
 watch(feeModeLocal, (v) => {
   feeModeDirty.value = normalizeFee(v) !== lastSavedFeeMode.value
@@ -662,11 +662,15 @@ const clampNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0)
 function tooltipFromGross(g){ const gross=clampNum(g); const pctAmt=+(gross*FEE_PCT).toFixed(2); const fee=+(pctAmt+FEE_FIXED).toFixed(2); const net=+(gross-fee).toFixed(2);
   return ['Modus: inkl. Gebühren',`Verkaufspreis: ${formatPrice(gross)}`,`Gebühren: ${formatPrice(fee)} = ${formatPrice(pctAmt)} (${pctStr()}) + ${formatPrice(FEE_FIXED)}`,`Veranstalter: ${formatPrice(net)}`,`Formel: net = gross - (gross * ${pctStr()} + ${formatPrice(FEE_FIXED)})`].join('\n') }
 function tooltipFromNet(n){ const net=clampNum(n); const pctAmt=+(net*FEE_PCT).toFixed(2); const fee=+(pctAmt+FEE_FIXED).toFixed(2); const gross=+(net+fee).toFixed(2);
-  return ['Modus: zzgl. Gebühren',`Veranstalter: ${formatPrice(net)}`,`Gebühren: ${formatPrice(fee)} = ${formatPrice(pctAmt)} (${pctStr()}) + ${formatPrice(FEE_FIXED)}`,`Verkaufspreis: ${formatPrice(gross)}`,`Formel: gross = net + (net * ${pctStr()} + ${formatPrice(FEE_FIXED)})`].join('\n') }
+  return ['Modus: zzgl. Gebühren',`Veranstalter: ${formatPrice(net)}`,`Gebühren: ${formatPrice(fee)} = ${formatPrice(pctAmt)} (${pctStr()}) + ${formatPrice(FEE_FIXED)}`,`Verkaufspreis: ${formatPrice(gross)}`,`Formel: gross = net + (net * ${pctStr()}) + ${formatPrice(FEE_FIXED)}`].join('\n') }
 const grossTooltipForCat = (c) => feeModeLocal.value === 'added' ? tooltipFromNet(c._view.net) : tooltipFromGross(c._view.gross)
 const netTooltipForCat   = (c) => feeModeLocal.value === 'added' ? tooltipFromNet(c._view.net) : tooltipFromGross(c._view.gross)
 const grossTooltipFromValues = (net,gross) => (feeModeLocal.value === 'added' ? tooltipFromNet(net) : tooltipFromGross(gross))
 const netTooltipFromValues   = (net,gross) => (feeModeLocal.value === 'added' ? tooltipFromNet(net) : tooltipFromGross(gross))
+
+/* 🔧 Für New-Row-Tooltips im Template */
+const grossTooltipForRow = (r) => (feeModeLocal.value === 'added' ? tooltipFromNet(r.net)   : tooltipFromGross(r.gross))
+const netTooltipForRow   = (r) => (feeModeLocal.value === 'added' ? tooltipFromNet(r.net)   : tooltipFromGross(r.gross))
 
 /* ============ Categories ============ */
 const categories = ref([])
@@ -687,7 +691,6 @@ function cancelEdit(c){ c._edit = { name:c.name, stock:c.stock, code:c.code, net
 
 function isDirty(c){
   const storedOrig   = Number(c.price || 0)
-  // WICHTIG: gegen zuletzt gespeicherten Modus vergleichen, damit bloßer UI-Moduswechsel nicht „dirty“ macht
   const storedEdited = toStoredPriceForMode(lastSavedFeeMode.value, { net:c._edit.net, gross:c._edit.gross })
   if (storedOrig !== storedEdited) return true
   return ['name','stock','code'].some(k => c._edit[k] !== c[k])
@@ -718,34 +721,52 @@ async function delExisting(c){
 
 /* New rows */
 const newRows = ref([])
-function addNewRow(){ newRows.value.push({ name:'', stock:null, code:null, net:null, gross:null }) }
+function addNewRow(){
+  newRows.value.push({
+    name:'', stock:null, code:null,
+    net:null, gross:null // Watcher berechnen je nach Modus
+  })
+}
 
-/* Live-Berechnung während der Eingabe/Änderung (Vorschau im aktuellen UI-Modus) */
-watch(categories, (arr) => {
-  (arr||[]).forEach(c => {
-    if (c._mode!=='edit') return
-    if (feeModeLocal.value === 'added'){
-      const net = Number(c._edit.net || 0)
-      c._edit.gross = +(net + calcFee(net)).toFixed(2)
-    } else {
-      const gross = Number(c._edit.gross || 0)
-      c._edit.net = +(gross - calcFee(gross)).toFixed(2)
-      if (c._edit.net < 0) c._edit.net = 0
-    }
-  })
-}, { deep:true })
-watch(newRows, (arr) => {
-  (arr||[]).forEach(r => {
-    if (feeModeLocal.value === 'added'){
-      const net = Number(r.net || 0)
-      r.gross = +(net + calcFee(net)).toFixed(2)
-    } else {
-      const gross = Number(r.gross || 0)
-      r.net = +(gross - calcFee(gross)).toFixed(2)
-      if (r.net < 0) r.net = 0
-    }
-  })
-}, { deep:true })
+/* Live-Berechnung: Edit/Neu – nur schreiben, wenn nötig (verhindert Rekursion) */
+watch(
+  categories,
+  (arr) => {
+    (arr||[]).forEach(c => {
+      if (c._mode!=='edit') return
+      if (feeModeLocal.value === 'added'){
+        const net = Number(c._edit.net || 0)
+        const nextGross = +(net + calcFee(net)).toFixed(2)
+        if (Number(c._edit.gross || 0) !== nextGross) c._edit.gross = nextGross
+      } else {
+        const gross = Number(c._edit.gross || 0)
+        let nextNet = +(gross - calcFee(gross)).toFixed(2)
+        if (nextNet < 0) nextNet = 0
+        if (Number(c._edit.net || 0) !== nextNet) c._edit.net = nextNet
+      }
+    })
+  },
+  { deep:true, flush:'post' }
+)
+
+watch(
+  newRows,
+  (arr) => {
+    (arr||[]).forEach(r => {
+      if (feeModeLocal.value === 'added'){
+        const net = Number(r.net || 0)
+        const nextGross = +(net + calcFee(net)).toFixed(2)
+        if (Number(r.gross || 0) !== nextGross) r.gross = nextGross
+      } else {
+        const gross = Number(r.gross || 0)
+        let nextNet = +(gross - calcFee(gross)).toFixed(2)
+        if (nextNet < 0) nextNet = 0
+        if (Number(r.net || 0) !== nextNet) r.net = nextNet
+      }
+    })
+  },
+  { deep:true, flush:'post' }
+)
 
 /* Save-Bar aktiv, wenn Fee-Mode geändert ODER Edits/Neuanlagen vorhanden */
 const canSaveAny = computed(() => {
@@ -758,11 +779,11 @@ const canSaveAny = computed(() => {
   return feeModeDirty.value || createOk || editsOk
 })
 
-/* ============ Speichern: zuerst FeeMode, dann Kategorien (ein Button) ============ */
+/* ============ Speichern ============ */
 const savingFee = ref(false)
 
 async function saveAll(){
-  // 1) Fee-Mode zuerst patchen, falls geändert
+  // 1) Fee-Mode zuerst patchen
   if (feeModeDirty.value){
     try{
       savingFee.value = true
@@ -778,7 +799,6 @@ async function saveAll(){
       emit('update:feeMode',   next)
 
       toastOk('Gebühren-Modus gespeichert.')
-      // Anzeige neu ableiten
       categories.value = (categories.value||[]).map(primeEditable)
     } catch(e){
       feeModeLocal.value = lastSavedFeeMode.value
@@ -791,13 +811,13 @@ async function saveAll(){
     }
   }
 
-  // 2) bestehende Edits speichern
+  // 2) Edits speichern
   for (const c of categories.value.filter(c => c._mode==='edit' && isDirty(c))) {
     // eslint-disable-next-line no-await-in-loop
     await saveExisting(c)
   }
 
-  // 3) neue Kategorien anlegen (unter dem aktuell gespeicherten Modus)
+  // 3) Neue Kategorien anlegen
   const creates = newRows.value
     .filter(r => r.name?.trim() && Number.isFinite(Number(r.stock)) &&
       (feeModeLocal.value==='added' ? Number.isFinite(Number(r.net)) : Number.isFinite(Number(r.gross))))
@@ -1065,6 +1085,9 @@ function formatPrice(p){ const n = Number(p); if (!Number.isFinite(n)) return '�
 async function loadAll(){ await Promise.allSettled([loadCategories(), loadTickets(), loadSummary()]) }
 onMounted(() => { loadAll() })
 watch(() => props.eventId, () => { loadAll() })
+
+/* (Optional) CSV-Export Placeholder) */
+function exportCsv(){ toastInfo('CSV-Export ist hier nur ein Platzhalter. Implementiere bei Bedarf.') }
 </script>
 
 <style scoped>

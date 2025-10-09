@@ -46,8 +46,7 @@ export const useWorkspaceApi = () => {
     ticketing: true, calendar: true, locations: true, artists: true, team: true
   }))
 
-  // ---------- Helpers für Location-Payload ----------
-  // number | null (explizit leeren) | undefined (nicht senden)
+  // ---------- Helpers ----------
   const _nullableNum = (v) => {
     if (v === null) return null
     if (v === undefined || v === '') return undefined
@@ -64,24 +63,15 @@ export const useWorkspaceApi = () => {
   }
   const _stripUndefined = (obj) => {
     const o = {}
-    for (const [k, v] of Object.entries(obj || {})) {
-      if (v !== undefined) o[k] = v
-    }
+    for (const [k, v] of Object.entries(obj || {})) if (v !== undefined) o[k] = v
     return o
   }
 
-  /**
-   * Normalisiert Location-Payload (NETTO-Pricing + Discounts).
-   * - Leere Zahlen -> null (Clear), fehlende -> undefined (nicht senden)
-   * - Leere Strings -> null (Clear), fehlende -> undefined
-   * - DE: vat_percent = 19, wenn nicht gesetzt (undefined). null bleibt null.
-   */
+  // ---------- Location-Payload ----------
   const normalizeLocationPayload = (payload = {}) => {
     const p = { ...(payload || {}) }
-
     if (typeof p.country === 'string') p.country = p.country.trim().toUpperCase() || undefined
 
-    // Pricing (netto)
     const pricing = {
       day_rate_base:           _nullableNum(p.day_rate_base),
       day_rate_includes_hours: _nullableNum(p.day_rate_includes_hours),
@@ -91,28 +81,18 @@ export const useWorkspaceApi = () => {
       deposit:                 _nullableNum(p.deposit),
       vat_percent:             _nullableNum(p.vat_percent),
     }
+    if (p.country === 'DE' && pricing.vat_percent === undefined) pricing.vat_percent = 19
 
-    // Auto-VAT: nur DE + undefined -> 19 (null = Clear bleibt)
-    if (p.country === 'DE' && pricing.vat_percent === undefined) {
-      pricing.vat_percent = 19
-    }
-
-    // Staffelrabatte
     let tiers = Array.isArray(p.multi_day_discounts) ? p.multi_day_discounts : undefined
     if (tiers) {
       tiers = tiers
-        .map(t => ({
-          min_days:    _nullableNum(t?.min_days),
-          percent_off: _nullableNum(t?.percent_off),
-        }))
-        .filter(t => (t.min_days !== undefined && t.min_days !== null && t.min_days >= 1)
-                  && (t.percent_off !== undefined && t.percent_off !== null && t.percent_off >= 0))
+        .map(t => ({ min_days: _nullableNum(t?.min_days), percent_off: _nullableNum(t?.percent_off) }))
+        .filter(t => (t.min_days ?? -1) >= 1 && (t.percent_off ?? -1) >= 0)
         .sort((a, b) => (a.min_days - b.min_days))
       if (!tiers.length) tiers = []
     }
 
     const out = {
-      // Basis
       name: _txtOrNull(p.name),
       address: _txtOrNull(p.address),
       postal_code: _txtOrNull(p.postal_code),
@@ -122,24 +102,20 @@ export const useWorkspaceApi = () => {
       phone: _txtOrNull(p.phone),
       website: _txtOrNull(p.website),
 
-      // Status
       status: _txtOrNull(p.status),
       verification_status: _txtOrNull(p.verification_status),
 
-      // Buchung
       booking_enabled: typeof p.booking_enabled === 'boolean' ? p.booking_enabled : undefined,
       booking_notes: _txtOrNull(p.booking_notes),
 
-      // Kapazitäten
-      area_sqm:                _nullableNum(p.area_sqm),
-      capacity_seated_min:     _nullableNum(p.capacity_seated_min),
-      capacity_seated_max:     _nullableNum(p.capacity_seated_max),
-      capacity_standing_max:   _nullableNum(p.capacity_standing_max),
-      toilets_count:           _nullableNum(p.toilets_count),
-      parking_count:           _nullableNum(p.parking_count),
-      rooms_count:             _nullableNum(p.rooms_count),
+      area_sqm:              _nullableNum(p.area_sqm),
+      capacity_seated_min:   _nullableNum(p.capacity_seated_min),
+      capacity_seated_max:   _nullableNum(p.capacity_seated_max),
+      capacity_standing_max: _nullableNum(p.capacity_standing_max),
+      toilets_count:         _nullableNum(p.toilets_count),
+      parking_count:         _nullableNum(p.parking_count),
+      rooms_count:           _nullableNum(p.rooms_count),
 
-      // Kataloge/Medien
       categories: Array.isArray(p.categories) ? p.categories : undefined,
       amenities:  Array.isArray(p.amenities)  ? p.amenities  : undefined,
       tech:       Array.isArray(p.tech)       ? p.tech       : undefined,
@@ -147,22 +123,18 @@ export const useWorkspaceApi = () => {
       rules:      Array.isArray(p.rules)      ? p.rules      : undefined,
       image_urls: Array.isArray(p.image_urls) ? p.image_urls : undefined,
 
-      // Regeln & Texte
       curfew_time: _txtOrNull(p.curfew_time),
       min_age: _nullableNum(p.min_age),
       max_noise_level_db: _nullableNum(p.max_noise_level_db),
 
-      // Netto-Pricing
       ...pricing,
-      multi_day_discounts: tiers,          // [] erlaubt, um zu leeren
+      multi_day_discounts: tiers,
       pricing_notes: _txtOrNull(p.pricing_notes),
       cancellation_policy: _txtOrNull(p.cancellation_policy),
     }
-
     return _stripUndefined(out)
   }
 
-  // Convenience: location_name aus payload.location ableiten (legacy Unterstützung)
   const withLocationName = (payload) => {
     const p = { ...(payload || {}) }
     if (typeof p.location === 'string' && p.location.trim()) {
@@ -172,10 +144,7 @@ export const useWorkspaceApi = () => {
     return p
   }
 
-  /**
-   * Einheitlicher Payload-Normalizer für Events.
-   * (Sende KEINE time_zone beim Create)
-   */
+  // ---------- Event-Create ----------
   const normalizeEventPayload = (ui = {}) => {
     const out = {
       title: ui.title?.trim() || '',
@@ -186,7 +155,6 @@ export const useWorkspaceApi = () => {
       external_ticket_url: ui.listing_mode === 'external' ? (ui.external_ticket_url || null) : null,
     }
 
-    // Location
     if (ui.locationMode === 'existing' && ui.selectedLocationId) {
       out.location_id = Number(ui.selectedLocationId)
     } else if (ui.locationMode === 'free' && ui.locationFree) {
@@ -199,7 +167,6 @@ export const useWorkspaceApi = () => {
       out.location_text_notes   = f.notes?.trim() || null
     }
 
-    // Ticket-System nur für INTERNAL
     if (out.listing_mode === 'internal') {
       out.ticket_sale_mode = ui.ticketMode === 'reserved' ? 'reserved' : 'general'
       if (ui.seatmap_id) out.seatmap_id = ui.seatmap_id
@@ -211,9 +178,123 @@ export const useWorkspaceApi = () => {
     return out
   }
 
-  // --- Workspace base ---
+  // ---------- Event-PATCH ----------
+  const normalizeEventAboutPatch = (ui = {}) => _stripUndefined({
+    title: _txtOrNull(ui.title),
+    category: _txtOrNull(ui.category),
+    date: ui.date || null,
+    end_date: ui.end_date || null,
+    time_zone: _txtOrNull(ui.time_zone)
+  })
+
+  // >>> Smart-Diff für Listing: sende nur echte Änderungen; NIE seatmap_id senden
+  const normalizeEventListingPatch = (ui = {}) => {
+    const prev = ui._prev || {}
+    const desired = ui.listing_mode === 'external' ? 'external' : 'internal'
+    const switching = prev.listing_mode && prev.listing_mode !== desired
+
+    const out = {}
+
+    if (switching) out.listing_mode = desired
+
+    if (desired === 'external') {
+      const url = _txtOrNull(ui.external_ticket_url) ?? null
+      const prevUrl = prev.external_ticket_url ?? null
+      if (url !== prevUrl) out.external_ticket_url = url
+      // KEINE ticketing-Felder schicken
+      return _stripUndefined(out)
+    }
+
+    // desired === 'internal'
+    // ext-URL gar nicht schicken (kein null-clear)
+    const tsm = ui.ticket_sale_mode === 'reserved' ? 'reserved' : 'general'
+    if (switching || tsm !== (prev.ticket_sale_mode || 'general')) {
+      out.ticket_sale_mode = tsm
+    }
+
+    // WICHTIG:
+    // - Keine seatmap_id senden. Beim Wechsel zu 'reserved' erzeugt das Backend
+    //   die Seatmap automatisch, falls noch keine existiert.
+    // - Auch KEIN seatmap_id:null schicken.
+
+    return _stripUndefined(out)
+  }
+
+  const normalizeEventLocationPatch = (ui = {}) => _stripUndefined({
+    location_text_name:    _txtOrNull(ui.location_text_name),
+    location_text_address: _txtOrNull(ui.location_text_address),
+    location_text_zip:     _txtOrNull(ui.location_text_zip),
+    location_text_city:    _txtOrNull(ui.location_text_city),
+    location_text_country: _txtOrNull(ui.location_text_country),
+    location_text_notes:   _txtOrNull(ui.location_text_notes),
+  })
+
+  // ===== Location helper =====
+  const _clearLocationTextFields = () => ({
+    location_text_name: null,
+    location_text_address: null,
+    location_text_zip: null,
+    location_text_city: null,
+    location_text_country: null,
+    location_text_notes: null
+  })
+  const _freeToTextFields = (free = {}) => _stripUndefined({
+    location_text_name:    _txtOrNull(free.name),
+    location_text_address: _txtOrNull(free.address),
+    location_text_zip:     _txtOrNull(free.zip),
+    location_text_city:    _txtOrNull(free.city),
+    location_text_country: _txtOrNull(free.country),
+    location_text_notes:   _txtOrNull(free.notes),
+  })
+
+  // ---------- Event-APIs ----------
   const list = (q, mine_only = true) => get('/v1/workspace', { q, mine_only })
   const create = (body) => post('/v1/workspace', body)
+  const getEvent = (eventId) => get(`/v1/workspace/${wid.value}/events/${eventId}`)
+
+  const patchEvent = (eventId, body) =>
+    patch(`/v1/workspace/${wid.value}/events/${eventId}`, body)
+
+  const updateEventAbout = async (eventId, ui) => {
+    await patchEvent(eventId, normalizeEventAboutPatch(ui))
+    const { data } = await getEvent(eventId)
+    return data
+  }
+  const updateEventListing = async (eventId, ui) => {
+    const body = normalizeEventListingPatch(ui)
+    // falls diff leer ist: kein Request
+    if (!body || !Object.keys(body).length) {
+      const { data } = await getEvent(eventId)
+      return data
+    }
+    await patchEvent(eventId, body)
+    const { data } = await getEvent(eventId)
+    return data
+  }
+  const updateEventLocation = async (eventId, ui) => {
+    await patchEvent(eventId, normalizeEventLocationPatch(ui))
+    const { data } = await getEvent(eventId)
+    return data
+  }
+
+  // *** Location-Auswahl für Events ***
+  const updateEventLocationExisting = async (eventId, locationId) => {
+    const payload = { location_id: Number(locationId) }
+    await patchEvent(eventId, payload)
+    const { data } = await getEvent(eventId)
+    return data
+  }
+  const updateEventLocationFree = async (eventId, free) => {
+    const payload = _stripUndefined({
+      location_id: null,
+      ..._freeToTextFields(free)
+    })
+    await patchEvent(eventId, payload)
+    const { data } = await getEvent(eventId)
+    return data
+  }
+
+  // --- Workspace base ---
   async function fetchWorkspace() {
     if (!wid.value) return
     const { data } = await get(`/v1/workspace/${wid.value}`)
@@ -256,13 +337,10 @@ export const useWorkspaceApi = () => {
   const acceptInvite = (body) =>
     post(`/v1/workspace/${wid.value}/invites/accept`, body)
 
-  // --- Events ---
+  // --- Events (weitere) ---
   const listEvents  = (q, active_only=true) => get(`/v1/workspace/${wid.value}/events`, { q, active_only })
-  const getEvent    = (eventId) => get(`/v1/workspace/${wid.value}/events/${eventId}`)
   const createEvent = (body) => post(`/v1/workspace/${wid.value}/events`, body)
-  const patchEvent  = (eventId, body) => patch(`/v1/workspace/${wid.value}/events/${eventId}`, body)
   const manageEvent = (eventId) => post(`/v1/workspace/${wid.value}/events/${eventId}/manage`)
-
   const deleteEvent = (eventId) => del(`/v1/workspace/${wid.value}/events/${eventId}`)
   const cloneEvent  = (eventId, body={}) => post(`/v1/workspace/${wid.value}/events/${eventId}:clone`, body)
   const archiveEvent = (eventId, body={ archived: true }) =>
@@ -358,6 +436,10 @@ export const useWorkspaceApi = () => {
 
   // --- Locations / Artists ---
   const listLocations = (q) => get(`/v1/workspace/${wid.value}/locations`, { q })
+  const searchLocations = (q, opts = {}) => {
+    const params = { q, ...opts }
+    return get(`/v1/workspace/${wid.value}/locations`, params)
+  }
   const createLocation = (body) =>
     post(`/v1/workspace/${wid.value}/locations`, normalizeLocationPayload(body))
   const getLocation = (locationId) => get(`/v1/workspace/${wid.value}/locations/${locationId}`)
@@ -365,6 +447,7 @@ export const useWorkspaceApi = () => {
     patch(`/v1/workspace/${wid.value}/locations/${locationId}`, normalizeLocationPayload(body))
   const deleteLocation = (locationId) => del(`/v1/workspace/${wid.value}/locations/${locationId}`)
 
+  // --- Artists ---
   const listArtists   = (q, kind) => get(`/v1/workspace/${wid.value}/artists`, { q, kind })
   const createArtist  = (body) => post(`/v1/workspace/${wid.value}/artists`, body)
   const getArtist     = (artistId) => get(`/v1/workspace/${wid.value}/artists/${artistId}`)
@@ -382,9 +465,7 @@ export const useWorkspaceApi = () => {
     del(`/v1/workspace/${wid.value}/psp/stripe/connection`, { remote, keep_settings })
   const stripeLoginLink       = () => post(`/v1/workspace/${wid.value}/psp/stripe/login-link`)
 
-  // ======================================================
-  // Location-Options (Meta)
-  // ======================================================
+  // ===== Meta / Options =====
   const locoptsState = useState('locopts_state', () => null)
   const locoptsEtag  = useState('locopts_etag', () => null)
   const locale       = useState('locale', () => 'de')
@@ -436,7 +517,7 @@ export const useWorkspaceApi = () => {
 
   const _list = (k) => computed(() => (locoptsState.value?.groups?.[k] || []).map(it => ({
     id: it.id_slug,
-    label: it.labels?.[locale.value] || it.labels?.[ 'de' ] || it.labels?.[ 'en' ] || it.id_slug,
+    label: it.labels?.[locale.value] || it.labels?.de || it.labels?.en || it.id_slug,
     meta: it.meta || {}
   })))
   const categories = _list('categories')
@@ -459,6 +540,75 @@ export const useWorkspaceApi = () => {
     rules:      _asMap(rules.value),
   }))
 
+  // ===== Event-Kategorien (Meta) =====
+  const evcatsState = useState('evcats_state', () => null)
+  const evcatsEtag  = useState('evcats_etag', () => null)
+
+  const EVCATS_DATA_KEY = 'evcats:data'
+  const EVCATS_ETAG_KEY = 'evcats:etag'
+
+  async function fetchEventCategoriesOptions (force = false) {
+    if (!force && evcatsState.value) return evcatsState.value
+    if (process.client && !evcatsState.value) {
+      try {
+        const cached = localStorage.getItem(EVCATS_DATA_KEY)
+        const et = localStorage.getItem(EVCATS_ETAG_KEY)
+        if (cached) { evcatsState.value = JSON.parse(cached) }
+        if (et) { evcatsEtag.value = et }
+      } catch {}
+    }
+    try {
+      const res = await get(`/v1/workspace/${wid.value}/events/meta/categories`)
+      if (res?.data) {
+        evcatsState.value = res.data
+        const tag = _calcPseudoEtag(res.data)
+        if (tag) evcatsEtag.value = tag
+        if (process.client) {
+          localStorage.setItem(EVCATS_DATA_KEY, JSON.stringify(res.data))
+          if (tag) localStorage.setItem(EVCATS_ETAG_KEY, tag)
+        }
+      }
+    } catch (e) {
+      if (!evcatsState.value) throw e
+    }
+    return evcatsState.value
+  }
+
+  const upsertEventCategoryGroup = (body) =>
+    put(`/v1/workspace/${wid.value}/events/meta/categories`, body)
+
+  const toggleEventCategory = (id_slug, active) =>
+    patch(`/v1/workspace/${wid.value}/events/meta/categories/${id_slug}`, { active })
+
+  const upsertEventCategoryItem = (id_slug, body) =>
+    put(`/v1/workspace/${wid.value}/events/meta/categories/${id_slug}`, body)
+
+  const deleteEventCategoryItem = (id_slug) =>
+    del(`/v1/workspace/${wid.value}/events/meta/categories/${id_slug}`)
+
+  const eventCategories = computed(() => {
+    const arr = evcatsState.value?.items || evcatsState.value?.categories || []
+    return arr.map(it => ({
+      id: it.id_slug || it.id,
+      label: it.labels?.[locale.value] || it.labels?.de || it.labels?.en || it.name || it.id_slug,
+      meta: it.meta || {},
+      active: it.active !== false
+    }))
+  })
+  const labelOfEventCategory = (id) => {
+    const arr = eventCategories.value
+    const the_hit = arr.find(x => (x.id === id))
+    return the_hit ? the_hit.label : id
+  }
+  const searchEventCategories = (q) => {
+    const term = (q || '').toLowerCase()
+    if (!term) return eventCategories.value
+    return eventCategories.value.filter(x =>
+      String(x.label || '').toLowerCase().includes(term) ||
+      String(x.id || '').toLowerCase().includes(term)
+    )
+  }
+
   return {
     // base
     wid, hasWid, current, features,
@@ -472,6 +622,10 @@ export const useWorkspaceApi = () => {
     // events
     listEvents, getEvent, createEvent, manageEvent, patchEvent, deleteEvent,
     cloneEvent, archiveEvent, saleReadiness, publishEvent, unpublishEvent,
+
+    // schlanke Update-APIs
+    updateEventAbout, updateEventListing, updateEventLocation,
+    updateEventLocationExisting, updateEventLocationFree,
 
     // ticketing
     addTicketCategories, listTicketCategories, patchTicketCategory, deleteTicketCategory,
@@ -495,8 +649,10 @@ export const useWorkspaceApi = () => {
     listEventsOfSeries, attachEventToSeries, detachEventFromSeries,
     listOccurrences, createOccurrence, createOccurrencesBulk, patchOccurrence, deleteOccurrence,
 
-    // locations/artists
-    listLocations, createLocation, getLocation, patchLocation, deleteLocation,
+    // locations
+    listLocations, searchLocations, createLocation, getLocation, patchLocation, deleteLocation,
+
+    // artists
     listArtists, createArtist, getArtist, patchArtist, deleteArtist,
     listEventArtists, addArtistToEvent, removeArtistFromEvent,
 
@@ -511,21 +667,17 @@ export const useWorkspaceApi = () => {
     // error util
     parseApiError,
 
-    // meta
-    fetchLocationOptions,
-    upsertLocationOptionGroup,
-    toggleLocationOptionItem,
+    // meta (locations)
+    fetchLocationOptions, upsertLocationOptionGroup, toggleLocationOptionItem,
+
+    // meta (events – Kategorien)
+    fetchEventCategoriesOptions,
+    upsertEventCategoryGroup, toggleEventCategory,
+    upsertEventCategoryItem, deleteEventCategoryItem,
+    evcatsState, evcatsEtag, eventCategories, labelOfEventCategory, searchEventCategories,
 
     // options state
-    locoptsState,
-    locoptsEtag,
-    locale,
-    categories,
-    amenities,
-    services,
-    tech,
-    rules,
-    optionMaps,
-    labelOf,
+    locoptsState, locoptsEtag, locale,
+    categories, amenities, services, tech, rules, optionMaps, labelOf,
   }
 }

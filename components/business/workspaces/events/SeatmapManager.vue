@@ -2,7 +2,7 @@
 <template>
   <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <strong>Reserved Seating</strong>
+      <strong>Reserved Seating · Zuweisungen</strong>
       <div class="btn-group">
         <button class="btn btn-sm btn-outline-secondary" @click="load" :title="t.load">
           <i class="bi bi-arrow-repeat"></i> Laden
@@ -14,12 +14,12 @@
     </div>
 
     <div class="card-body">
-      <div class="alert alert-warning" v-if="!seatmapId">
-        <i class="bi bi-exclamation-triangle"></i>
-        Für Seating brauchst du eine <strong>Seatmap ID</strong> am Event.
+      <div class="alert alert-warning d-flex gap-2 align-items-start" v-if="!seatmapId">
+        <i class="bi bi-exclamation-triangle mt-1"></i>
+        <div>Für Seating brauchst du eine <strong>Seatmap ID</strong> am Event.</div>
       </div>
 
-      <div class="alert alert-light border small d-flex gap-2">
+      <div class="alert alert-light border small d-flex gap-2 align-items-start">
         <i class="bi bi-info-circle mt-1"></i>
         <div>
           <strong>Zuweisungen (Kategorie → Sitz-Labels)</strong><br>
@@ -32,15 +32,21 @@
         JSON-Struktur:
         <code>{ "&lt;category_id&gt;": ["A-1","A-2", ...] }</code>
       </p>
+
       <textarea class="form-control" rows="8" v-model="jsonText"></textarea>
 
       <div class="mt-3 d-flex gap-2 flex-wrap">
-        <button class="btn btn-outline-primary" @click="mint" :title="t.generateFromAssignments">
+        <button class="btn btn-outline-primary" @click="mint" :disabled="!seatmapId" :title="t.generateFromAssignments">
           <i class="bi bi-coin"></i> Tickets aus Zuweisungen erzeugen
         </button>
         <button class="btn btn-success" @click="publishReserved" :title="t.publishReserved">
           <i class="bi bi-megaphone"></i> Reserved-Seating Event veröffentlichen
         </button>
+        <NuxtLink
+          class="btn btn-outline-secondary"
+          :to="`/business/w/${wid}/events/${eventId}/seatmap-builder`">
+          <i class="bi bi-vector-pen"></i> Seatmap Builder öffnen
+        </NuxtLink>
       </div>
 
       <div class="alert alert-light border small mt-3">
@@ -67,7 +73,7 @@
           <textarea class="form-control" rows="5" v-model="autoAssign.rowsText"
             placeholder='{"FLOOR":["A","B"],"BALCONY":["1","2"]}'></textarea>
         </div>
-        <div class="col-md-12 d-flex align-items-center gap-3">
+        <div class="col-12 d-flex align-items-center gap-3">
           <div class="form-check">
             <input id="aa-replace" class="form-check-input" type="checkbox" v-model="autoAssign.replace">
             <label for="aa-replace" class="form-check-label">Vorherige Zuweisungen überschreiben</label>
@@ -88,6 +94,10 @@ const props = defineProps({
   eventId: { type: [Number, String], required: true },
   seatmapId: { type: [Number, String, null], default: null }
 })
+
+const route = useRoute()
+const wid = Number(route.params.wid)
+
 const {
   getSeatingAssignments, setSeatingAssignments,
   mintFromAssignments, publishReservedEvent, seatingAutoAssign
@@ -147,4 +157,6 @@ async function doAutoAssign(){
   debug.value = { auto_assign: data ?? 'OK' }
   await load()
 }
+
+onMounted(load)
 </script>

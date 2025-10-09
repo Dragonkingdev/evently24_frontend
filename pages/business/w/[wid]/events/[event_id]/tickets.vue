@@ -1,23 +1,13 @@
 <!-- pages/business/w/[wid]/events/[event_id]/tickets.vue -->
 <template>
   <div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h4 class="mb-0">Tickets verwalten</h4>
-      <div class="btn-group">
-        <NuxtLink :to="`/business/w/${wid}/events/${eventId}`" class="btn btn-outline-secondary">
-          <i class="bi bi-arrow-left"></i> Details
-        </NuxtLink>
-      </div>
-    </div>
+    <EventHero :wid="wid" :event-id="eventId" :ev="ev" @updated="onUpdated" />
+    <EventNav :wid="wid" :event-id="eventId" :ev="ev" active="tickets" />
 
     <div v-if="pending" class="card p-3 text-muted">Lädt…</div>
 
     <div v-else class="row g-4">
-      <div class="col-12 col-lg-4 order-1 order-lg-2">
-        <EventSummaryCard :wid="wid" :event-id="eventId" :ev="ev" />
-      </div>
-
-      <div class="col-12 col-lg-8 order-2 order-lg-1">
+      <div class="col-12">
         <template v-if="isGA">
           <div class="alert alert-light border">
             <div class="fw-semibold mb-1">General Admission</div>
@@ -58,9 +48,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import EventHero from '~/components/business/workspaces/events/EventHero.vue'
+import EventNav from '~/components/business/workspaces/events/EventNav.vue'
 import TicketsManager from '~/components/business/workspaces/events/TicketsManager.vue'
-import EventSummaryCard from '~/components/business/workspaces/events/EventSummaryCard.vue'
 
 const route = useRoute()
 const wid = Number(route.params.wid)
@@ -68,12 +58,13 @@ const eventId = Number(route.params.event_id)
 
 const headers = useRequestHeaders(['cookie'])
 const apiBase = useRuntimeConfig().public.apiBaseUrl
-
 const fetcher = () => $fetch(`${apiBase}/v1/workspace/${wid}/events/${eventId}`, {
   headers, credentials: 'include', cache: 'no-store'
 })
 const { data, pending } = await useAsyncData(`event-${wid}-${eventId}`, fetcher)
 const ev = computed(() => data.value || null)
+
+function onUpdated(val){ if (val) data.value = val }
 
 const isReserved = computed(() => {
   const tsm = String(ev.value?.ticket_sale_mode || '').toUpperCase()
