@@ -49,11 +49,11 @@
       </div>
     </div>
 
-    <!-- Karte 2: Listing-Modus (inkl. Ticketsystem für internal) -->
+    <!-- Karte 2: Listing-Modus -->
     <div class="card" id="card-listing">
       <div class="card-header d-flex align-items-center justify-content-between">
         <strong>Listing-Modus</strong>
-        <span class="text-muted small">Intern vs. Extern</span>
+        <span class="text-muted small">Intern, Extern oder Info</span>
       </div>
       <div class="card-body">
         <div class="row g-3">
@@ -62,6 +62,8 @@
             <select class="form-select" v-model="form.listing_mode" :disabled="busy">
               <option value="internal">Intern (Ticketsystem)</option>
               <option value="external">Extern (Weiterleitung)</option>
+              <!-- 🆕 Info-Modus -->
+              <option value="info">Info (ohne Ticketverkauf)</option>
             </select>
           </div>
 
@@ -76,7 +78,7 @@
           </div>
 
           <!-- Intern -->
-          <template v-else>
+          <template v-else-if="form.listing_mode==='internal'">
             <div class="col-12">
               <div class="row g-3">
                 <div class="col-md-6">
@@ -108,7 +110,7 @@
                 Bitte Ticket-System wählen.
               </div>
 
-              <!-- ⬇️ NEU: Gebühren-Modus Auswahl -->
+              <!-- Gebühren-Modus Auswahl -->
               <div class="mt-3">
                 <label class="form-label mb-2">Gebühren-Modus</label>
                 <div class="row g-2">
@@ -143,13 +145,27 @@
                   Bitte einen Gebühren-Modus wählen.
                 </div>
               </div>
-              <!-- ⬆️ NEU -->
 
               <div class="alert alert-info d-flex align-items-start mt-3">
                 <i class="bi bi-info-circle me-2 mt-1"></i>
                 <div>
                   <div><strong>Interner Verkauf</strong></div>
                   <div class="small">Zum Veröffentlichen: Stripe verbinden & Tickets anlegen.</div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- 🆕 Info -->
+          <template v-else-if="form.listing_mode==='info'">
+            <div class="col-12">
+              <div class="alert alert-secondary d-flex align-items-start">
+                <i class="bi bi-bullhorn me-2 mt-1"></i>
+                <div>
+                  <div class="fw-semibold">Info-Listing (ohne Ticketverkauf)</div>
+                  <div class="small">
+                    Öffentliche Veranstaltung ohne Eintritt/Tickets. Kein Shop, keine Kategorien, keine Gebühren.
+                  </div>
                 </div>
               </div>
             </div>
@@ -242,7 +258,7 @@
 </template>
 
 <script setup>
-/* basiert 1:1 auf deiner aktuellen Wizard-Logik – nur in Karten gegliedert */
+/* basiert 1:1 auf deiner aktuellen Wizard-Logik – + Info-Modus */
 import { onMounted, ref, reactive, computed, watch, nextTick } from 'vue'
 
 const emit = defineEmits(['submit'])
@@ -255,7 +271,7 @@ const props = defineProps({
 })
 
 const CATEGORIES = [
-  'Party','Konzert','Festival','Theater','Comedy','Musical/Show','Kino/Film',
+  'Party','Konzert','Festival','Theater','Comedy','Volksfest','Musical/Show','Kino/Film',
   'Sport','Lesung','Vortrag','Konferenz','Messe/Expo','Workshop','Kurs/Schulung',
   'Networking/Meetup','Business','Tech/IT','Gaming/Esports','Kunst/Kultur','Ausstellung',
   'Familie/Kids','Tanz','Fitness','Wellness/Spiritual','Food & Drink','Fashion',
@@ -263,19 +279,25 @@ const CATEGORIES = [
   'Webinar/Online','Community','Sonstiges'
 ]
 
-const form = reactive({ title: '', category: '', listing_mode: 'internal', external_ticket_url: '', fee_mode: 'included' })
+const form = reactive({
+  title: '',
+  category: '',
+  listing_mode: 'internal',
+  external_ticket_url: '',
+  fee_mode: 'included'
+})
 const showErrors = ref(false)
 const ticketMode = ref('ga')
 const localDateStart = ref(''); const localDateEnd = ref('')
 
-// --- Location State (wie gehabt) ---
+// --- Location State ---
 const locationMode = ref('existing')
 const selectedLocationId = ref(null)
 const locationFree = reactive({ name: '', address: '', zip: '', city: '', country: '', notes: '' })
 const locationOptions = ref(props.initialLocations || [])
 const locationQuery = ref('')
 
-/* Server-Error Helfer */
+// Server-Error helpers
 const serverErr = computed(() => props.serverError || null)
 const serverFieldSet = computed(() => {
   const s = new Set()
@@ -286,36 +308,62 @@ const serverFieldSet = computed(() => {
 const hasServerFieldError = (name) => serverFieldSet.value.has(name)
 const LOC_FIELDS = ['location_text_name','location_text_address','location_text_city']
 const hasAnyServerLocationError = computed(() => LOC_FIELDS.some(hasServerFieldError))
-function prettyField (f) { return ({ external_ticket_url:'Externe Ticket-URL', location_text_name:'Location-Name', location_text_address:'Location-Adresse', location_text_city:'Location-Stadt', fee_mode:'Gebühren-Modus' })[f] || f }
+function prettyField (f) {
+  return ({
+    external_ticket_url:'Externe Ticket-URL',
+    location_text_name:'Location-Name',
+    location_text_address:'Location-Adresse',
+    location_text_city:'Location-Stadt',
+    fee_mode:'Gebühren-Modus'
+  })[f] || f
+}
 
-/* Locations laden (debounced) */
+// Locations laden (debounced)
 let locTimer = null
 const debouncedLoadLocations = () => { if (locTimer) clearTimeout(locTimer); locTimer = setTimeout(loadLocationOptions, 250) }
 async function loadLocationOptions () {
-  try { const { listLocations } = props.api; const res = await listLocations(locationQuery.value || ''); locationOptions.value = Array.isArray(res?.data) ? res.data : [] }
-  catch { locationOptions.value = [] }
+  try {
+    const { listLocations } = props.api
+    const res = await listLocations(locationQuery.value || '')
+    locationOptions.value = Array.isArray(res?.data) ? res.data : []
+  } catch { locationOptions.value = [] }
 }
 onMounted(() => { loadLocationOptions() })
 
-/* 10-Min-Raster */
+// 10-Minuten-Raster
 function snapTo10(dt){ if (!dt) return ''; const d = new Date(dt); if (isNaN(d)) return ''; const m = d.getMinutes(); d.setMinutes(Math.round(m/10)*10,0,0); const p = n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}` }
 function snapStartToStep(){ if (localDateStart.value) localDateStart.value = snapTo10(localDateStart.value) }
 function snapEndToStep(){ if (localDateEnd.value) localDateEnd.value = snapTo10(localDateEnd.value) }
 
-/* Validation */
+// Validation
 const validTitle = computed(() => !!form.title?.trim())
 const validStart = computed(() => !!localDateStart.value)
 const validEndRange = computed(() => { if (!localDateEnd.value) return true; const s = new Date(localDateStart.value), e = new Date(localDateEnd.value); return !(isNaN(s)||isNaN(e)) && e.getTime() >= s.getTime() })
-const validExternalUrl = computed(() => { if (form.listing_mode !== 'external') return true; const v = String(form.external_ticket_url || '').trim(); if (!v) return false; try { const u = new URL(v); return !!u.protocol && !!u.host } catch { return false } })
-const validLocationFree = computed(() => locationMode.value !== 'free' || (!!locationFree.name?.trim() && !!locationFree.address?.trim() && !!locationFree.city?.trim()))
-const canSubmit = computed(() => validTitle.value && validStart.value && validEndRange.value && validLocationFree.value && (form.listing_mode === 'external' ? validExternalUrl.value : !!ticketMode.value))
+const validExternalUrl = computed(() => {
+  if (form.listing_mode !== 'external') return true
+  const v = String(form.external_ticket_url || '').trim()
+  if (!v) return false
+  try { const u = new URL(v); return !!u.protocol && !!u.host } catch { return false }
+})
+const validLocationFree = computed(() =>
+  locationMode.value !== 'free' || (!!locationFree.name?.trim() && !!locationFree.address?.trim() && !!locationFree.city?.trim())
+)
 
-/* Scroll-API für Parent (IDs an Karten angepasst) */
+// submit-enable: intern braucht ticketMode; extern braucht URL; info braucht weder noch
+const canSubmit = computed(() => {
+  if (!(validTitle.value && validStart.value && validEndRange.value && validLocationFree.value)) return false
+  if (form.listing_mode === 'external') return validExternalUrl.value
+  if (form.listing_mode === 'internal') return !!ticketMode.value
+  // info
+  return true
+})
+
+// Scroll-API
 function scrollToAnchor(id){ const el=document.getElementById(id); if (el) el.scrollIntoView({behavior:'smooth', block:'start'}) }
 function goToStep(n){ const map = {1:'card-event', 2:'card-listing', 3:'card-location'}; scrollToAnchor(map[n] || 'card-event') }
 defineExpose({ goToStep })
 
-/* Serialize / Submit */
+// Serialize / Submit
 const toISO = (dt) => { if (!dt) return null; const d = new Date(dt); return isNaN(d) ? null : d.toISOString() }
 function buildApiPayload(){
   const base = {
@@ -341,16 +389,26 @@ function buildApiPayload(){
 
   if (base.listing_mode === 'internal') {
     base.ticket_sale_mode = (ticketMode.value === 'reserved') ? 'reserved' : 'general'
-    // ⬇️ NEU: Gebührenmodus nur bei internem Verkauf senden
     base.fee_mode = form.fee_mode || 'included'
-  } else {
+  } else if (base.listing_mode === 'external') {
     base.ticket_sale_mode = null
     base.seatmap_id = null
-    // Bei externem Listing fee_mode nicht mitsenden
+    // fee_mode für extern nicht mitsenden
+  } else if (base.listing_mode === 'info') {
+    // 🆕 Info: keinerlei Ticketing-Felder
+    base.external_ticket_url = null
+    base.ticket_sale_mode = null
+    // seatmap/fee_mode weglassen
   }
+
   return base
 }
-async function onSubmit(){ showErrors.value = true; if (!canSubmit.value) return; emit('submit', buildApiPayload()) }
+
+async function onSubmit(){
+  showErrors.value = true
+  if (!canSubmit.value) return
+  emit('submit', buildApiPayload())
+}
 </script>
 
 <style scoped>

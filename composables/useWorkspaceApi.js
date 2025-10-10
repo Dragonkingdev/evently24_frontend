@@ -146,13 +146,14 @@ export const useWorkspaceApi = () => {
 
   // ---------- Event-Create ----------
   const normalizeEventPayload = (ui = {}) => {
+    const lm = ui.listing_mode || 'internal'
     const out = {
       title: ui.title?.trim() || '',
       category: ui.category || null,
       date: ui.date || null,
       end_date: ui.end_date || null,
-      listing_mode: ui.listing_mode || 'internal',
-      external_ticket_url: ui.listing_mode === 'external' ? (ui.external_ticket_url || null) : null,
+      listing_mode: lm,
+      external_ticket_url: lm === 'external' ? (ui.external_ticket_url || null) : null,
     }
 
     if (ui.locationMode === 'existing' && ui.selectedLocationId) {
@@ -167,10 +168,16 @@ export const useWorkspaceApi = () => {
       out.location_text_notes   = f.notes?.trim() || null
     }
 
-    if (out.listing_mode === 'internal') {
+    // Listing-Mode Logik
+    if (lm === 'internal') {
       out.ticket_sale_mode = ui.ticketMode === 'reserved' ? 'reserved' : 'general'
       if (ui.seatmap_id) out.seatmap_id = ui.seatmap_id
-    } else {
+    } else if (lm === 'external') {
+      delete out.ticket_sale_mode
+      delete out.seatmap_id
+    } else if (lm === 'info') {
+      // reines Info-Listing: keinerlei Ticketing
+      out.external_ticket_url = null
       delete out.ticket_sale_mode
       delete out.seatmap_id
     }
@@ -187,32 +194,40 @@ export const useWorkspaceApi = () => {
     time_zone: _txtOrNull(ui.time_zone)
   })
 
-  // >>> Smart-Diff für Listing: sende nur echte Änderungen; NIE seatmap_id senden
+  // >>> Smart-Diff für Listing inkl. 'info': sende nur echte Änderungen; NIE seatmap_id senden
   const normalizeEventListingPatch = (ui = {}) => {
     const prev = ui._prev || {}
-    const desired = ui.listing_mode === 'external' ? 'external' : 'internal'
-    const switching = prev.listing_mode && prev.listing_mode !== desired
+    const desiredInput = ui.listing_mode || prev.listing_mode || 'internal'
+    const desired = ['internal', 'external', 'info'].includes(desiredInput) ? desiredInput : 'internal'
+    const switching = !!prev.listing_mode && prev.listing_mode !== desired
 
     const out = {}
 
     if (switching) out.listing_mode = desired
 
     if (desired === 'external') {
-      const url = _txtOrNull(ui.external_ticket_url) ?? null
-      const prevUrl = prev.external_ticket_url ?? null
-      if (url !== prevUrl) out.external_ticket_url = url
-      // KEINE ticketing-Felder schicken
+      // Im External-Mode MUSS eine URL mit, aber wir schicken kein null
+      const url = _txtOrNull(ui.external_ticket_url)
+      const prevUrl = _txtOrNull(prev.external_ticket_url)
+      if (switching || url !== prevUrl) {
+        if (url) out.external_ticket_url = url
+        // Wenn keine URL vorhanden: lieber gar nicht patchen und den Client validieren lassen
+      }
       return _stripUndefined(out)
     }
 
-    // desired === 'internal'
-    // ext-URL gar nicht schicken (kein null-clear)
-    const tsm = ui.ticket_sale_mode === 'reserved' ? 'reserved' : 'general'
-    if (switching || tsm !== (prev.ticket_sale_mode || 'general')) {
-      out.ticket_sale_mode = tsm
+    if (desired === 'internal') {
+      // ext-URL gar nicht schicken (Backend setzt/ignoriert selbst)
+      const tsm = ui.ticket_sale_mode === 'reserved' ? 'reserved' : 'general'
+      const prevTsm = prev.ticket_sale_mode || 'general'
+      if (switching || tsm !== prevTsm) out.ticket_sale_mode = tsm
+      return _stripUndefined(out)
     }
 
-    // WICHTIG: keine seatmap_id in PATCH senden
+    if (desired === 'info') {
+      // Reines Info-Listing: explizit alles Ticketing-relevante leeren
+      return _stripUndefined(out)
+    }
 
     return _stripUndefined(out)
   }

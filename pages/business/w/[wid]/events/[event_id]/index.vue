@@ -87,16 +87,28 @@
                   <div class="ev-tile-body">
                     <div class="ev-tile-label">Modus</div>
                     <div class="ev-tile-value">
-                      <span class="mode-chip" :class="ev?.listing_mode==='external' ? 'mode-ext' : 'mode-int'">
-                        {{ ev?.listing_mode==='external' ? 'extern' : 'intern' }}
+                      <span
+                        class="mode-chip"
+                        :class="{
+                          'mode-ext': ev?.listing_mode==='external',
+                          'mode-int': ev?.listing_mode==='internal',
+                          'mode-info': ev?.listing_mode==='info'
+                        }"
+                      >
+                        {{ ev?.listing_mode==='external' ? 'extern' : (ev?.listing_mode==='internal' ? 'intern' : 'info') }}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
 
+              <!-- Info-Modus: sonst nichts anzeigen -->
+              <template v-if="ev?.listing_mode==='info'">
+                <!-- intentionally empty: nur Modus-Kachel -->
+              </template>
+
               <!-- Extern: Ticket-Link -->
-              <template v-if="ev?.listing_mode==='external'">
+              <template v-else-if="ev?.listing_mode==='external'">
                 <div class="col-md-6">
                   <div class="ev-tile">
                     <div class="ev-tile-icon"><i class="bi bi-link-45deg"></i></div>
@@ -294,6 +306,8 @@ function formatDate(v){
 .mode-chip{ display:inline-block; padding:.25rem .5rem; border-radius:.5rem; font-weight:600; line-height:1.1; border:1px solid transparent; }
 .mode-int{ color:#0b5ed7; background:rgba(13,110,253,.10); border-color:rgba(13,110,253,.18); }
 .mode-ext{ color:#b54708; background:#fff4e6; border-color:#ffe8cc; }
+/* 🆕 Info-Modus Styling */
+.mode-info{ color:#0f5132; background:#e9f7ef; border-color:#d1f1e0; }
 
 .truncate-link{ display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
 

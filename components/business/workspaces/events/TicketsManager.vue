@@ -555,6 +555,81 @@
         </div>
       </section>
 
+      <!-- TAB: SUMMARY (Neu: Inhalte) -->
+      <section v-show="tab==='summary'">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h6 class="mb-0">Ticket Summary</h6>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-outline-secondary" @click="loadSummary">
+              <i class="bi bi-arrow-repeat"></i> Aktualisieren
+            </button>
+          </div>
+        </div>
+
+        <!-- Gesamtsummen -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-3 col-sm-6">
+            <div class="border rounded p-3 h-100">
+              <div class="small text-muted">Erzeugt (minted)</div>
+              <div class="fs-5 fw-semibold">{{ summary?.totals?.minted ?? 0 }}</div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="border rounded p-3 h-100">
+              <div class="small text-muted">Verkauft (sold)</div>
+              <div class="fs-5 fw-semibold text-success">{{ summary?.totals?.sold ?? 0 }}</div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="border rounded p-3 h-100">
+              <div class="small text-muted">Reserviert</div>
+              <div class="fs-5 fw-semibold text-warning">{{ summary?.totals?.reserved ?? 0 }}</div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="border rounded p-3 h-100">
+              <div class="small text-muted">Verfügbar</div>
+              <div class="fs-5 fw-semibold">{{ summary?.totals?.available ?? 0 }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pro Kategorie -->
+        <div class="table-responsive">
+          <table class="table align-middle table-hover">
+            <thead class="table-light">
+              <tr>
+                <th style="width:90px">Cat-ID</th>
+                <th>Name</th>
+                <th style="width:120px">Minted</th>
+                <th style="width:120px">Sold</th>
+                <th style="width:120px">Reserved</th>
+                <th style="width:120px">Available</th>
+                <th style="width:120px">Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in perCategoryRows" :key="row.id">
+                <td class="text-muted">#{{ row.id }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.minted }}</td>
+                <td><span class="badge bg-success">{{ row.sold }}</span></td>
+                <td><span class="badge bg-warning text-dark">{{ row.reserved }}</span></td>
+                <td>{{ row.available }}</td>
+                <td>{{ row.stock ?? '—' }}</td>
+              </tr>
+              <tr v-if="!perCategoryRows.length">
+                <td colspan="7" class="text-muted">Keine Kategorien vorhanden.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="small text-muted mt-2">
+          Hinweis: <code>minted</code> = physisch erzeugte freie Tickets; <code>sold</code> = verkaufte/ausgestellte; <code>reserved</code> = aktuell blockiert; <code>available</code> = noch verfügbar (Stock − sold − reserved).
+        </div>
+      </section>
+
       <pre v-if="debug" class="small mt-4 bg-light p-2 border rounded">{{ debugText }}</pre>
     </div>
   </div>
@@ -760,6 +835,10 @@ const netTooltipForRow   = (r) => (feeModeLocal.value === 'added' ? tooltipFromN
 const categories = ref([])
 const catMap = computed(() => Object.fromEntries((categories.value||[]).map(c => [Number(c.id), c.name])))
 const catName = (id) => catMap.value[Number(id)] || `#${id}`
+const catStockById = (id) => {
+  const c = (categories.value||[]).find(x => Number(x.id) === Number(id))
+  return c ? Number(c.stock ?? 0) : null
+}
 
 function primeEditable(c){
   const { net, gross } = deriveFromStoredPrice(c.price)
@@ -812,7 +891,7 @@ function addNewRow(){
   })
 }
 
-/* Live-Berechnung: Edit/Neu – nur schreiben, wenn nötig (verhindert Rekursion) */
+/* Live-Berechnung: Edit/Neu – nur schreiben, wenn nötig */
 watch(
   categories,
   (arr) => {
@@ -970,13 +1049,10 @@ async function mintNow(){
     toastOk('Tickets erstellt.')
   }
 
-  // Felder zurücksetzen (komfortabel)
+  // Felder zurücksetzen
   mint.quantity = 1
   mint.seat_label_prefix = ''
-  // E-Mail bewusst NICHT löschen, falls nacheinander mehrfach ausgestellt werden soll:
-  // mint.email = ''
 }
-
 
 /* GA Hold */
 const gaHold = reactive({ category_id: null, qty: 1, ttl_days: 30, email: '' })
@@ -1125,6 +1201,20 @@ async function loadSummary(){
   if (error){ toastErr('Summary fehlgeschlagen.'); return }
   summary.value = data || null
 }
+const perCategoryRows = computed(() => {
+  const pc = summary.value?.per_category || {}
+  const rows = Object.entries(pc).map(([id, v]) => ({
+    id: Number(id),
+    name: catName(id),
+    minted: Number(v?.minted ?? 0),
+    sold: Number(v?.sold ?? 0),
+    reserved: Number(v?.reserved ?? 0),
+    available: Number(v?.available ?? 0),
+    stock: catStockById(id)
+  }))
+  rows.sort((a,b) => a.id - b.id)
+  return rows
+})
 async function publish(){
   const { error } = await publishEvent(props.eventId)
   if (error){ toastErr('Publish fehlgeschlagen.'); return }
@@ -1182,10 +1272,11 @@ function closeViewer(){ viewer.value.open=false }
 function onEsc(e){
   if (e.key === 'Escape' && viewer.value?.open) closeViewer()
 }
-onMounted(() => window.addEventListener('keydown', onEsc))
+onMounted(() => { loadAll(); window.addEventListener('keydown', onEsc) })
 onUnmounted(() => window.removeEventListener('keydown', onEsc))
+watch(() => props.eventId, () => { loadAll() })
 
-// (B) Viewer: weitere, optionale Felder hübsch rendern (alles was wir kennen, filtern wir aus)
+// (B) Viewer: weitere, optionale Felder hübsch rendern
 const viewerExtra = computed(() => {
   const t = viewer.value?.ticket || null
   if (!t || typeof t !== 'object') return []
@@ -1194,7 +1285,6 @@ const viewerExtra = computed(() => {
     .filter(([k,v]) => !hide.has(k) && v != null && v !== '')
     .map(([k,v]) => ({ k, v: String(v) }))
 })
-
 
 /* ============ Utils (formatting) ============ */
 function formatDate(v){
@@ -1209,10 +1299,8 @@ function formatDate(v){
 function formatPrice(p){ const n = Number(p); if (!Number.isFinite(n)) return '—'
   return new Intl.NumberFormat('de-DE', { style:'currency', currency:'EUR' }).format(n) }
 
-/* ============ Initial Load & Reactions ============ */
+/* ============ Initial Load Helper ============ */
 async function loadAll(){ await Promise.allSettled([loadCategories(), loadTickets(), loadSummary()]) }
-onMounted(() => { loadAll() })
-watch(() => props.eventId, () => { loadAll() })
 
 /* (Optional) CSV-Export Placeholder) */
 function exportCsv(){ toastInfo('CSV-Export ist hier nur ein Platzhalter. Implementiere bei Bedarf.') }
