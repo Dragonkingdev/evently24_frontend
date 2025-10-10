@@ -236,9 +236,9 @@
 <script setup>
 import EventHero from '~/components/business/workspaces/events/EventHero.vue'
 import EventNav from '~/components/business/workspaces/events/EventNav.vue'
-import EditAboutModal from '~/components/business/workspaces/events/EditAboutModal.vue'
-import EditListingModal from '~/components/business/workspaces/events/EditListingModal.vue'
-import EditLocationModal from '~/components/business/workspaces/events/EditLocationModal.vue'
+import EditAboutModal from '~/components/business/workspaces/events/modals/EditAboutModal.vue'
+import EditListingModal from '~/components/business/workspaces/events/modals/EditListingModal.vue'
+import EditLocationModal from '~/components/business/workspaces/events/modals/EditLocationModal.vue'
 
 const route = useRoute()
 const wid = Number(route.params.wid)

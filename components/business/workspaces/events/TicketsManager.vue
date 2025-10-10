@@ -238,7 +238,7 @@
                   <option v-for="c in categories" :key="c.id" :value="c.id">#{{ c.id }} – {{ c.name }} (frei: {{ availableOf(c) }})</option>
                 </select>
               </div>
-              <div class="col-md-3">
+              <div class="col-md-2">
                 <label class="form-label">Stückzahl</label>
                 <input class="form-control" type="number" min="1" v-model.number="mint.quantity" placeholder="z. B. 10"/>
               </div>
@@ -246,12 +246,26 @@
                 <label class="form-label">Seat-Prefix (optional)</label>
                 <input class="form-control" v-model="mint.seat_label_prefix" placeholder="z. B. A"/>
               </div>
+
+              <!-- NEU: E-Mail (optional) – wenn gesetzt, werden Tickets direkt als COMP ausgestellt -->
+              <div class="col-md-3">
+                <label class="form-label">E-Mail (optional)</label>
+                <input class="form-control" type="email" v-model.trim="mint.email" placeholder="kunde@example.com" />
+              </div>
+
               <div class="col-md-auto">
-                <button class="btn btn-outline-primary w-100" @click="mintNow"><i class="bi bi-plus-circle"></i> Erstellen</button>
+                <button class="btn btn-outline-primary w-100" @click="mintNow">
+                  <i class="bi bi-plus-circle"></i> Erstellen
+                </button>
               </div>
             </div>
             <div class="small text-muted mt-2">
-              Erstellt <strong>physische Tickets</strong> (ohne Kauf). Für Zuweisung an E-Mail nutze unten <em>Reservieren</em>.
+              <template v-if="mint.email?.trim()">
+                Erstellt Tickets und stellt sie <strong>als COMP</strong> direkt auf <em>{{ mint.email }}</em> aus (0&nbsp;€-Order).
+              </template>
+              <template v-else>
+                Erstellt <strong>physische Tickets</strong> (frei, ohne Kauf). Für Zuweisung nutze das E-Mail-Feld oder unten <em>Reservieren</em>.
+              </template>
             </div>
           </div>
         </div>
@@ -548,8 +562,78 @@
   <!-- Ticket-Editor (Modal) – Placeholder -->
   <div class="modal fade show" tabindex="-1" style="display:block" v-if="editor && editor.open" @click.self="closeEditor"></div>
 
-  <!-- Ticket-Viewer (Modal) – Placeholder -->
-  <div class="modal fade show" tabindex="-1" style="display:block" v-if="viewer && viewer.open" @click.self="closeViewer"></div>
+  <!-- Ticket-Viewer (Modal) – FIXED -->
+  <div class="modal fade show" tabindex="-1" style="display:block" v-if="viewer && viewer.open" @click.self="closeViewer">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            Ticket #{{ viewer.ticket?.id || '—' }}
+            <span class="ms-2 badge" :class="viewer.ticket?.sold ? 'bg-success' : 'bg-light text-dark'">
+              {{ viewer.ticket?.sold ? 'sold' : '—' }}
+            </span>
+            <span class="ms-1 badge" :class="viewer.ticket?.reserved ? 'bg-warning text-dark' : 'bg-light text-dark'">
+              {{ viewer.ticket?.reserved ? 'reserved' : '—' }}
+            </span>
+          </h5>
+          <button type="button" class="btn-close" @click="closeViewer" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="small text-muted">Kategorie</div>
+              <div class="fw-semibold">
+                {{ viewer.ticket?.category_name || catName(viewer.ticket?.category_id) }}
+                <span class="text-muted">(#{{ viewer.ticket?.category_id }})</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="small text-muted">E-Mail</div>
+              <div class="fw-semibold">{{ viewer.ticket?.buyer_email || '—' }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="small text-muted">Seat</div>
+              <div class="fw-semibold">{{ viewer.ticket?.seat_label || '—' }}</div>
+            </div>
+            <div class="col-md-6">
+              <div class="small text-muted">Erstellt</div>
+              <div class="fw-semibold">{{ formatDate(viewer.ticket?.created_at) }}</div>
+            </div>
+
+            <div class="col-md-6" v-if="viewer.ticket?.order_id">
+              <div class="small text-muted">Order-ID</div>
+              <div class="fw-semibold">#{{ viewer.ticket.order_id }}</div>
+            </div>
+            <div class="col-md-6" v-if="viewer.ticket?.updated_at">
+              <div class="small text-muted">Zuletzt aktualisiert</div>
+              <div class="fw-semibold">{{ formatDate(viewer.ticket.updated_at) }}</div>
+            </div>
+
+            <div class="col-12" v-if="viewerExtra && viewerExtra.length">
+              <hr class="my-2"/>
+              <div class="small text-muted mb-1">Weitere Felder</div>
+              <div class="d-flex flex-wrap gap-2">
+                <span v-for="row in viewerExtra" :key="row.k" class="badge bg-secondary-subtle text-secondary">
+                  {{ row.k }}: {{ row.v }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button v-if="!isGA" class="btn btn-outline-primary" @click="openEditor(viewer.ticket)">
+            <i class="bi bi-pencil-square"></i> Ticket bearbeiten
+          </button>
+          <button class="btn btn-secondary" @click="closeViewer">
+            Schließen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Bootstrap Toasts -->
   <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1200">
@@ -568,7 +652,7 @@
 
 <script setup>
 /* ============ Imports & Options ============ */
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 defineOptions({ name: 'TicketsMager' })
 
 /* ============ Props & Basic Mode ============ */
@@ -855,18 +939,44 @@ async function doBulkUpsert(){
 }
 
 /* ============ Mint / Holds ============ */
-const mint = reactive({ category_id: null, quantity: 1, seat_label_prefix: '' })
+const mint = reactive({ category_id: null, quantity: 1, seat_label_prefix: '', email: '', note: '' })
+
 async function mintNow(){
   if (!mint.category_id || !mint.quantity) return
-  const body = { category_id:Number(mint.category_id), quantity:Number(mint.quantity),
-                 seat_label_prefix: isGA.value ? null : (mint.seat_label_prefix || null) }
+
+  const body = {
+    category_id: Number(mint.category_id),
+    quantity: Number(mint.quantity),
+    seat_label_prefix: isGA.value ? null : (mint.seat_label_prefix || null)
+  }
+
+  const email = mint.email?.trim()
+  if (email) {
+    body.assignee_email = email
+    if (mint.note?.trim()) body.note = mint.note.trim()
+  }
+
   const { data, error } = await mintTickets(props.eventId, body)
   if (error) { toastErr('Erstellen fehlgeschlagen.'); return }
-  tab.value='tickets'; paging.offset=0
-  await Promise.allSettled([loadTickets(), loadSummary()])
+
+  tab.value = 'tickets'
+  paging.offset = 0
+  await Promise.allSettled([loadTickets(), loadSummary(), loadCategories()])
+
   debug.value = { created: data }
-  toastOk('Tickets erstellt.')
+  if (email) {
+    toastOk(`Tickets ausgestellt (COMP) an ${email}.`)
+  } else {
+    toastOk('Tickets erstellt.')
+  }
+
+  // Felder zurücksetzen (komfortabel)
+  mint.quantity = 1
+  mint.seat_label_prefix = ''
+  // E-Mail bewusst NICHT löschen, falls nacheinander mehrfach ausgestellt werden soll:
+  // mint.email = ''
 }
+
 
 /* GA Hold */
 const gaHold = reactive({ category_id: null, qty: 1, ttl_days: 30, email: '' })
@@ -1067,6 +1177,24 @@ async function doSwapSeatFromEditor(){
 const viewer = ref({ open:false, ticket:null })
 function openViewer(row){ viewer.value={ open:true, ticket:row } }
 function closeViewer(){ viewer.value.open=false }
+
+// (A) Viewer: Escape schließt Modal
+function onEsc(e){
+  if (e.key === 'Escape' && viewer.value?.open) closeViewer()
+}
+onMounted(() => window.addEventListener('keydown', onEsc))
+onUnmounted(() => window.removeEventListener('keydown', onEsc))
+
+// (B) Viewer: weitere, optionale Felder hübsch rendern (alles was wir kennen, filtern wir aus)
+const viewerExtra = computed(() => {
+  const t = viewer.value?.ticket || null
+  if (!t || typeof t !== 'object') return []
+  const hide = new Set(['id','category_id','category_name','buyer_email','seat_label','reserved','sold','created_at','updated_at','order_id'])
+  return Object.entries(t)
+    .filter(([k,v]) => !hide.has(k) && v != null && v !== '')
+    .map(([k,v]) => ({ k, v: String(v) }))
+})
+
 
 /* ============ Utils (formatting) ============ */
 function formatDate(v){

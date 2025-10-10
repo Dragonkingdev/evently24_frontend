@@ -22,10 +22,13 @@
             v-model.trim="search"
             type="text"
             class="form-control"
-            placeholder="Namen, Adresse oder Stadt eingeben…"
+            placeholder="Mehrere Begriffe (z. B. Berlin Arena). Zeilenumbruch = weiterer Begriff."
             @input="debouncedFetch()"
+            @keydown.enter.prevent="debouncedFetch()"
           />
-          <div class="form-text">Tippe zum Suchen. Auswahl unten anklicken.</div>
+          <div class="form-text">
+            Filter: <strong>Alle</strong> eingegebenen Begriffe müssen vorkommen (AND). Trenne mit Leerzeichen oder Zeilenumbruch.
+          </div>
         </div>
 
         <div v-if="loading" class="text-muted small">Suche läuft…</div>
@@ -96,6 +99,7 @@
 </template>
 
 <script setup>
+import { ref, reactive, watch, computed } from 'vue'
 import BizModal from '~/components/business/workspaces/ui/BizModal.vue'
 
 const props = defineProps({

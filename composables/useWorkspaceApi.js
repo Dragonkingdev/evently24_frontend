@@ -212,10 +212,7 @@ export const useWorkspaceApi = () => {
       out.ticket_sale_mode = tsm
     }
 
-    // WICHTIG:
-    // - Keine seatmap_id senden. Beim Wechsel zu 'reserved' erzeugt das Backend
-    //   die Seatmap automatisch, falls noch keine existiert.
-    // - Auch KEIN seatmap_id:null schicken.
+    // WICHTIG: keine seatmap_id in PATCH senden
 
     return _stripUndefined(out)
   }
@@ -247,13 +244,14 @@ export const useWorkspaceApi = () => {
     location_text_notes:   _txtOrNull(free.notes),
   })
 
-  // ---------- Event-APIs ----------
+  // ---------- Workspace-APIs ----------
+  // Achtung: 2. Parameter ist "mine_only"
   const list = (q, mine_only = true) => get('/v1/workspace', { q, mine_only })
   const create = (body) => post('/v1/workspace', body)
-  const getEvent = (eventId) => get(`/v1/workspace/${wid.value}/events/${eventId}`)
 
-  const patchEvent = (eventId, body) =>
-    patch(`/v1/workspace/${wid.value}/events/${eventId}`, body)
+  // ---------- Event-APIs ----------
+  const getEvent = (eventId) => get(`/v1/workspace/${wid.value}/events/${eventId}`)
+  const patchEvent = (eventId, body) => patch(`/v1/workspace/${wid.value}/events/${eventId}`, body)
 
   const updateEventAbout = async (eventId, ui) => {
     await patchEvent(eventId, normalizeEventAboutPatch(ui))
@@ -262,7 +260,6 @@ export const useWorkspaceApi = () => {
   }
   const updateEventListing = async (eventId, ui) => {
     const body = normalizeEventListingPatch(ui)
-    // falls diff leer ist: kein Request
     if (!body || !Object.keys(body).length) {
       const { data } = await getEvent(eventId)
       return data
@@ -435,7 +432,15 @@ export const useWorkspaceApi = () => {
     del(`/v1/workspace/${wid.value}/calendar/events/${eventId}/occurrences/${occurrenceId}`)
 
   // --- Locations / Artists ---
-  const listLocations = (q) => get(`/v1/workspace/${wid.value}/locations`, { q })
+  const listLocations = (qOrParams) => {
+    let params = {}
+    if (typeof qOrParams === 'string') {
+      params.q = qOrParams
+    } else if (qOrParams && typeof qOrParams === 'object') {
+      params = { ...qOrParams } // allow future extensions
+    }
+    return get(`/v1/workspace/${wid.value}/locations`, params)
+  }
   const searchLocations = (q, opts = {}) => {
     const params = { q, ...opts }
     return get(`/v1/workspace/${wid.value}/locations`, params)
@@ -549,6 +554,10 @@ export const useWorkspaceApi = () => {
 
   async function fetchEventCategoriesOptions (force = false) {
     if (!force && evcatsState.value) return evcatsState.value
+
+    // FIX: ohne wid keinen API-Call versuchen
+    if (!wid.value) return evcatsState.value
+
     if (process.client && !evcatsState.value) {
       try {
         const cached = localStorage.getItem(EVCATS_DATA_KEY)
@@ -614,6 +623,8 @@ export const useWorkspaceApi = () => {
     wid, hasWid, current, features,
     list, create, setCurrent, fetchWorkspace, fetchStats,
     patchWorkspace, archiveWorkspace, restoreWorkspace, deleteWorkspace,
+
+    listMyWorkspaces: (q = '') => list(q, true), // mine_only=true
 
     // members/invites
     listMembers, addMember, updateMemberRole, removeMember, leaveWorkspace,
