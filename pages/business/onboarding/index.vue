@@ -1,4 +1,4 @@
-<!--pages/business/onboarding/index.vue-->
+<!-- pages/business/onboarding/index.vue -->
 <template>
   <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -44,6 +44,8 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: 'businessonboarding' }) // 👈 wichtig
+
 import WorkspaceOnboardingForm from '~/components/business/onboarding/WorkspaceOnboardingForm.vue'
 
 const { create, setCurrent, parseApiError } = useWorkspaceApi()

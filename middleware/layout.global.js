@@ -1,10 +1,13 @@
+// middleware/layout.global.js
 export default defineNuxtRouteMiddleware((to) => {
-  if (to.path.startsWith('/business')) {
-    // Layout setzen
-    setPageLayout('businesslayout')
-    //console.log('Business Layout aktiv')
+  if (to.path.startsWith('/business/onboarding')) {
+    setPageLayout('businessonboardinglayout')
+    to.meta.auth = true
+    return
+  }
 
-    // Flag für Auth setzen – landet in route.meta
+  if (to.path.startsWith('/business')) {
+    setPageLayout('businesslayout')
     to.meta.auth = true
   }
 })
