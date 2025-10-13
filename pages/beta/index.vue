@@ -1,13 +1,43 @@
+<!-- pages/beta/index.vue-->
 <template>
   <div>
     <!-- Progress -->
     <div class="progressbar" aria-hidden="true"></div>
 
+    <!-- TOP TICKER (neu) -->
+    <div class="top-ticker" role="region" aria-label="Hinweisleiste: Registrierung & Ticketsystem">
+      <div class="ticker-viewport" aria-hidden="false">
+        <div class="ticker-track">
+          <!-- Gruppe A -->
+          <ul class="ticker-group">
+            <li class="ticker-item"><i class="bi bi-megaphone"></i> Jetzt registrieren – Events vermarkten</li>
+            <li class="ticker-item"><i class="bi bi-ticket-perforated"></i> Ticketsystem nutzen – in Minuten live</li>
+            <li class="ticker-item"><i class="bi bi-graph-up-arrow"></i> Reichweite & Conversion messen</li>
+            <li class="ticker-item"><i class="bi bi-lightning-charge"></i> Beta-Partner werden – Early Pricing sichern</li>
+          </ul>
+          <!-- Gruppe B (Duplikat für Endlosschleife) -->
+          <ul class="ticker-group" aria-hidden="true">
+            <li class="ticker-item"><i class="bi bi-megaphone"></i> Jetzt registrieren – Events vermarkten</li>
+            <li class="ticker-item"><i class="bi bi-ticket-perforated"></i> Ticketsystem nutzen – in Minuten live</li>
+            <li class="ticker-item"><i class="bi bi-graph-up-arrow"></i> Reichweite & Conversion messen</li>
+            <li class="ticker-item"><i class="bi bi-lightning-charge"></i> Beta-Partner werden – Early Pricing sichern</li>
+          </ul>
+          <!-- Gruppe B (Duplikat für Endlosschleife) -->
+          <ul class="ticker-group" aria-hidden="true">
+            <li class="ticker-item"><i class="bi bi-megaphone"></i> Jetzt registrieren – Events vermarkten</li>
+            <li class="ticker-item"><i class="bi bi-ticket-perforated"></i> Ticketsystem nutzen – in Minuten live</li>
+            <li class="ticker-item"><i class="bi bi-graph-up-arrow"></i> Reichweite & Conversion messen</li>
+            <li class="ticker-item"><i class="bi bi-lightning-charge"></i> Beta-Partner werden – Early Pricing sichern</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top" aria-label="Hauptnavigation">
       <div class="container-fluid container-xxl">
-        <a class="navbar-brand d-flex align-items-center gap-2" href="#top">
-          <i class="bi bi-stars text-brand fs-4"></i><strong>Evently24</strong>
+        <a class="navbar-brand d-flex align-items-center gap-2" href="#top" aria-label="Zur Startsektion springen">
+          <i class="bi bi-stars text-brand fs-4" aria-hidden="true"></i><strong>Evently24</strong>
         </a>
         <button
           class="navbar-toggler"
@@ -44,28 +74,34 @@
       <div class="container-fluid container-xxl py-lg-4 position-relative" style="z-index:1">
         <div class="row align-items-center g-4">
           <div class="col-lg-7 reveal fade-in">
-            <span class="chip-animated badge rounded-pill mb-3 text-white"><i class="bi bi-lightning-charge me-1"></i> Beta live in deiner Region</span>
+            <span class="chip-animated badge rounded-pill mb-3 text-white" aria-label="Beta live Hinweis"><i class="bi bi-lightning-charge me-1" aria-hidden="true"></i> Beta live in deiner Region</span>
             <h1 class="display-5 fw-bold mb-2 grad-title">Alle Events. Ein Ort.</h1>
-            <p class="lead mb-4">Die Plattform, die lokale Kultur sichtbar macht – <strong>Events anlegen</strong> → <strong>Tickets verkaufen</strong> → <strong>Reichweite messen</strong>.</p>
+            <p class="lead mb-3">
+              Die Plattform, die lokale Kultur sichtbar macht – <strong>Events anlegen</strong> → <strong>Tickets verkaufen</strong> → <strong>Reichweite messen</strong>.
+            </p>
+            <div class="alert alert-gradient text-white small d-inline-flex align-items-center gap-2 mb-4" role="note" aria-live="polite">
+              <i class="bi bi-tag" aria-hidden="true"></i>
+              <strong>Early-Adopter: 12 Monate nur 4,4 % + 0,50 €</strong> – danach Standard 5,4 % + 0,50 €.
+            </div>
             <div class="d-flex gap-2">
-              <a href="#cta" class="btn btn-brand btn-lg px-4 focus-ring"><span class="sparkle"></span><i class="bi bi-rocket-takeoff me-2"></i> Beta-Partner werden</a>
-              <a href="#solution" class="btn btn-outline-light btn-lg px-4 text-white border-2 focus-ring"><i class="bi bi-play-circle me-2"></i> Wie es funktioniert</a>
+              <a href="#cta" class="btn btn-brand btn-lg px-4 focus-ring"><span class="sparkle"></span><i class="bi bi-rocket-takeoff me-2" aria-hidden="true"></i> Beta-Partner werden</a>
+              <a href="#solution" class="btn btn-outline-light btn-lg px-4 text-white border-2 focus-ring"><i class="bi bi-play-circle me-2" aria-hidden="true"></i> Wie es funktioniert</a>
             </div>
             <p class="mt-3 small text-white-50">Keine Kreditkarte nötig • DSGVO-konform • Stripe integriert</p>
           </div>
           <div class="col-lg-5">
             <!-- Live-Dashboard (sichtbare KPIs) -->
-            <div class="card border-0 glass reveal">
+            <div class="card border-0 glass reveal" aria-label="Demo Live-Dashboard">
               <div class="card-body p-4">
                 <div class="d-flex align-items-center justify-content-between">
                   <div>
                     <div class="kicker">Live-Dashboard</div>
-                    <h3 class="h5 mt-1">Alles auf einen Blick</h3>
+                    <p class="fs-5 text-white mt-1">Alles auf einen Blick</p>
                   </div>
-                  <span class="icon-round"><i class="bi bi-graph-up"></i></span>
+                  <span class="icon-round" aria-hidden="true"><i class="bi bi-graph-up"></i></span>
                 </div>
-                <div class="divider-x my-3"></div>
-                <div class="row text-center">
+                <div class="divider-x my-3" aria-hidden="true"></div>
+                <div class="row text-center" aria-label="Beispiel-KPIs">
                   <div class="col-4">
                     <div class="fw-bold fs-4 kpi-value" data-countup="1200">0</div>
                     <div class="text-white-50 small">Aufrufe</div>
@@ -79,7 +115,7 @@
                     <div class="text-white-50 small">Conversion</div>
                   </div>
                 </div>
-                <div class="mt-4 d-flex align-items-center gap-2"><i class="bi bi-badge-ad text-brand"></i><span class="small text-white-50">Automatische Social Ads aktiv</span></div>
+                <div class="mt-4 d-flex align-items-center gap-2"><i class="bi bi-badge-ad text-brand" aria-hidden="true"></i><span class="small text-white-50">Automatische Social Ads aktiv</span></div>
               </div>
             </div>
             <p class="text-white-50 small mt-3 mb-0">Beispieldaten zu Demo-Zwecken</p>
@@ -126,10 +162,10 @@
 
           <!-- MOSAIC -->
           <div class="col-lg-6 reveal">
-            <div class="media-mosaic">
+            <div class="media-mosaic" aria-label="Visuelle Beispielkarten">
               <!-- Großes Poster -->
               <div class="tile" style="grid-column:1; grid-row:1 / span 2;">
-                <img src="https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?q=80&w=1200&auto=format&fit=crop" alt="Open-Air Konzert">
+                <img src="https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?q=80&w=1200&auto=format&fit=crop" alt="Open-Air Konzert in Berlin">
                 <div class="corner-badge"><i class="bi bi-geo-alt"></i> Berlin</div>
                 <div class="label">
                   <span class="pill">Sa · 21:00</span>
@@ -147,7 +183,7 @@
 
               <!-- Kleines Poster -->
               <div class="tile" style="grid-column:2; grid-row:2;">
-                <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1000&auto=format&fit=crop" alt="Comedy Night">
+                <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1000&auto=format&fit=crop" alt="Comedy Night Plakat">
                 <div class="corner-badge"><i class="bi bi-ticket-perforated"></i> ab 12 €</div>
                 <div class="label">
                   <span class="pill">Comedy Night</span>
@@ -257,20 +293,105 @@
     <section id="roadmap" class="py-6 section-soft">
       <div class="container-fluid container-xxl">
         <div class="row align-items-start g-4">
-          <div class="col-lg-5 reveal">
+          <div class="col-lg-5 my-auto reveal">
             <div class="kicker">Roadmap</div>
             <h2 class="section-title grad-title">Stabil, phasenweise, gemeinsam mit euch.</h2>
-            <p class="lead-muted">Wir liefern in klaren Ausbaustufen. Beta-Partner priorisieren mit.</p>
+            <p class="lead-muted">
+              Wir liefern in klaren Ausbaustufen. Beta-Partner priorisieren mit.
+              <span class="d-block mt-2 text-muted small">Initial werden die ersten {{ initialVisible }} Schritte gezeigt – mehr auf Klick.</span>
+            </p>
           </div>
+
+          <!-- Inline: nur die ersten N Schritte -->
           <div class="col-lg-7">
-            <div class="roadmap-step p-3 mb-3 reveal"><div class="d-flex align-items-start gap-2"><span class="icon-round"><i class="bi bi-1-circle"></i></span><div><strong>Phase 1 – Beta (Live)</strong><p class="mb-1 small text-muted">Eventanlage, Ticketing (Stripe), Dashboard, Website-Widget, Profile (Basis)</p></div></div></div>
-            <div class="roadmap-step p-3 mb-3 reveal"><div class="d-flex align-items-start gap-2"><span class="icon-round"><i class="bi bi-2-circle"></i></span><div><strong>Phase 2 – Automatisierte Ads</strong><p class="mb-1 small text-muted">Meta/TikTok-Integration, Pixel, A/B-Tests, Budget-Automation</p></div></div></div>
-            <div class="roadmap-step p-3 reveal"><div class="d-flex align-items-start gap-2"><span class="icon-round"><i class="bi bi-3-circle"></i></span><div><strong>Phase 3 – Community & Empfehlungen</strong><p class="mb-1 small text-muted">Freunde, Künstler/Location-Matching, personalisierte Feeds</p></div></div></div>
-            <p class="disclaimer mt-3 mb-0">Zeitangaben sind Richtwerte; Inhalte werden nach Beta-Feedback priorisiert.</p>
+            <ol class="roadmap-list" :aria-label="`Roadmap – aktuell ${initialVisible} von ${phases.length} Schritten sichtbar`">
+              <li v-for="(p, i) in phases.slice(0, initialVisible)" :key="p.id" class="roadmap-step p-3 mb-3 reveal">
+                <div class="d-flex align-items-start gap-3">
+                  <span class="step-index" :aria-label="`Schritt ${i+1}`">{{ i + 1 }}</span>
+                  <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <strong>{{ p.title }}</strong>
+                      <span v-if="p.badge" :class="['badge', p.badgeClass, 'rounded-pill']">{{ p.badge }}</span>
+                    </div>
+                    <p class="mb-1 small text-muted">{{ p.desc }}</p>
+                    <ul v-if="p.bullets?.length" class="small text-muted mb-0 ps-3">
+                      <li v-for="(b, k) in p.bullets" :key="k">{{ b }}</li>
+                    </ul>
+                  </div>
+                </div>
+              </li>
+            </ol>
+
+            <!-- Button: öffnet Custom Modal -->
+            <div class="d-flex">
+              <button
+                type="button"
+                ref="openRoadmapBtn"
+                class="btn btn-outline-brand mx-auto focus-ring"
+                @click="openModal"
+                :aria-controls="'roadmapCustomModal'"
+                aria-expanded="false"
+              >
+                <i class="bi bi-plus-circle me-1" aria-hidden="true"></i> Mehr anzeigen
+              </button>
+            </div>
+
+            <div class="d-flex">
+              <p class="disclaimer mx-auto mt-3 mb-0">
+                Zeitangaben sind Richtwerte; Inhalte werden nach Beta-Feedback priorisiert.
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </section>
+
+    <!-- CUSTOM ROADMAP MODAL -->
+    <div
+      v-if="showRoadmap"
+      class="custom-modal-backdrop"
+      @click="closeModal"
+      :aria-hidden="false"
+    >
+      <div
+        id="roadmapCustomModal"
+        class="custom-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="roadmapModalLabel"
+        aria-describedby="roadmapModalDesc"
+        tabindex="-1"
+        ref="modalRef"
+        @click.stop
+      >
+        <div class="custom-modal-header">
+          <h5 id="roadmapModalLabel" class="mb-0">Roadmap – alle {{ phases.length }} Schritte</h5>
+          <button type="button" class="btn-close focus-ring" aria-label="Schließen" @click="closeModal"></button>
+        </div>
+        <div id="roadmapModalDesc" class="custom-modal-body">
+          <ol class="roadmap-list modal-roadmap-list" :aria-label="`Roadmap Vollansicht – ${phases.length} Schritte`">
+            <li v-for="(p, i) in phases" :key="p.id" class="roadmap-step p-3 mb-3">
+              <div class="d-flex align-items-start gap-3">
+                <span class="step-index" :aria-label="`Schritt ${i+1}`">{{ i + 1 }}</span>
+                <div>
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <strong>{{ p.title }}</strong>
+                    <span v-if="p.badge" :class="['badge', p.badgeClass, 'rounded-pill']">{{ p.badge }}</span>
+                  </div>
+                  <p class="mb-1 small text-muted">{{ p.desc }}</p>
+                  <ul v-if="p.bullets?.length" class="small text-muted mb-0 ps-3">
+                    <li v-for="(b, k) in p.bullets" :key="k">{{ b }}</li>
+                  </ul>
+                </div>
+              </div>
+            </li>
+          </ol>
+        </div>
+        <div class="custom-modal-footer">
+          <button type="button" class="btn btn-outline-secondary" @click="closeModal">Schließen</button>
+        </div>
+      </div>
+    </div>
 
     <!-- PRICING -->
     <section id="pricing" class="py-6">
@@ -284,26 +405,33 @@
         </div>
 
         <div class="row g-4 align-items-stretch">
+          <!-- Einführungspreis -->
           <div class="col-lg-5 reveal">
             <div class="card h-100 shadow-sm">
               <div class="card-body p-4">
-                <h3 class="h5 mb-3"><i class="bi bi-cash-coin me-2 text-brand"></i>All-in-Service-Fee</h3>
-                <p class="fs-4 fw-bold mb-1">5,4 % <span class="text-muted">+ 0,50 €</span> <span class="fs-6 text-muted">pro verkauftem Ticket</span></p>
+                <div class="d-flex align-items-center justify-content-between">
+                  <h3 class="h5 mb-0"><i class="bi bi-cash-coin me-2 text-brand" aria-hidden="true"></i>Einführungspreis</h3>
+                  <span class="badge badge-soft rounded-pill">12 Monate</span>
+                </div>
+                <p class="fs-4 fw-bold mb-1 mt-2">4,4 % <span class="text-muted">+ 0,50 €</span> <span class="fs-6 text-muted">pro verkauftem Ticket</span></p>
+                <p class="small text-muted mb-2">Gültig für die ersten 12 Monate ab deinem Onboarding. Danach Standardgebühr.</p>
                 <ul class="mt-3 text-muted small list-unstyled">
                   <li class="mb-2"><i class="bi bi-check2 me-2 text-success"></i>Zahlungsabwicklung (Stripe) inklusive</li>
                   <li class="mb-2"><i class="bi bi-check2 me-2 text-success"></i>Hosting, Dashboard & Support inklusive</li>
                   <li class="mb-2"><i class="bi bi-check2 me-2 text-success"></i>Keine Setup-, Grund- oder Mindestgebühren</li>
                 </ul>
-                <div class="alert alert-secondary small mb-0"><i class="bi bi-exclamation-circle me-2"></i>Bei Premium-Zahlarten (z. B. PayPal, bestimmte Kreditkarten) kann für Käufer ein kleiner Aufpreis entstehen.</div>
+                <div class="alert alert-secondary small mb-0"><i class="bi bi-exclamation-circle me-2" aria-hidden="true"></i>Bei Premium-Zahlarten (z. B. PayPal, bestimmte Kreditkarten) kann für Käufer ein kleiner Aufpreis entstehen.</div>
               </div>
             </div>
           </div>
 
+          <!-- Standardpreis -->
           <div class="col-lg-7 reveal">
             <div class="card h-100 shadow-sm">
               <div class="card-body p-4">
-                <h3 class="h5 mb-3"><i class="bi bi-stars me-2 text-brand"></i>Warum es sich lohnt</h3>
-                <div class="row g-3">
+                <h3 class="h5 mb-3"><i class="bi bi-stars me-2 text-brand" aria-hidden="true"></i>Standard ab Monat 13</h3>
+                <p class="fs-4 fw-bold mb-1">5,4 % <span class="text-muted">+ 0,50 €</span> <span class="fs-6 text-muted">pro verkauftem Ticket</span></p>
+                <div class="row g-3 mt-1">
                   <div class="col-md-6"><div class="d-flex align-items-start gap-2"><span class="icon-round"><i class="bi bi-bounding-box-circles"></i></span><div><strong>Alles-in-einem</strong><p class="small text-muted mb-0">Events, Tickets, Werbung, Profile & Analyse – ein Workflow.</p></div></div></div>
                   <div class="col-md-6"><div class="d-flex align-items-start gap-2"><span class="icon-round"><i class="bi bi-robot"></i></span><div><strong>Automatisierte Ads</strong><p class="small text-muted mb-0">Meta/TikTok mit A/B-Optimierung – Budget festlegen, fertig.</p></div></div></div>
                   <div class="col-md-6"><div class="d-flex align-items-start gap-2"><span class="icon-round"><i class="bi bi-speedometer2"></i></span><div><strong>Live-Dashboard</strong><p class="small text-muted mb-0">Verkäufe, Reichweite, Conversion – Zahlen statt Bauchgefühl.</p></div></div></div>
@@ -313,6 +441,11 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Vergleichs-Hinweis -->
+        <div class="text-center mt-4 small text-muted">
+          Early-Adopter sparen effektiv 1 Prozentpunkt im ersten Jahr – ideal für den Einstieg und schnelles Wachstum.
         </div>
       </div>
     </section>
@@ -356,8 +489,9 @@
               <li class="mb-1">Voller Funktionsumfang während der Beta</li>
               <li class="mb-1">Persönlicher Onboarding-Support</li>
               <li class="mb-1">Mitbestimmung der nächsten Features</li>
+              <li class="mb-1">Einführungspreis: 12 Monate nur 4,4 % + 0,50 €</li>
             </ul>
-            <a id="cta" href="#contact" class="btn btn-brand btn-lg focus-ring"><span class="sparkle"></span><i class="bi bi-send-check me-2"></i> Beta anfragen</a>
+            <a id="cta" href="#contact" class="btn btn-brand btn-lg focus-ring"><span class="sparkle"></span><i class="bi bi-send-check me-2" aria-hidden="true"></i> Beta anfragen</a>
             <a href="#faq" class="btn btn-outline-light btn-lg ms-2 focus-ring">Fragen & Antworten</a>
           </div>
           <div class="col-lg-5 reveal">
@@ -368,15 +502,15 @@
                   <div class="mb-3"><label class="form-label">E-Mail</label><input type="email" class="form-control" placeholder="max@veranstalter.de" required></div>
                   <div class="mb-3">
                     <label class="form-label">Du bist …</label>
-                    <select class="form-select">
+                    <select class="form-select" aria-label="Rolle auswählen">
                       <option>Veranstalter</option>
                       <option>Location</option>
                       <option>Künstler / Coach</option>
                     </select>
                   </div>
                   <div class="mb-3"><label class="form-label">Nachricht</label><textarea class="form-control" rows="3" placeholder="Kurz: Welche Events/Angebote? Ab wann?"></textarea></div>
-                  <button type="submit" class="btn btn-brand w-100 focus-ring"><span class="sparkle"></span><i class="bi bi-rocket-takeoff me-2"></i>Anfrage senden</button>
-                  <p class="disclaimer mt-2 mb-0">Mit Absenden bestätigst du die Verarbeitung deiner Angaben gemäß unserer Datenschutzerklärung.</p>
+                  <button type="submit" class="btn btn-brand w-100 focus-ring"><span class="sparkle"></span><i class="bi bi-rocket-takeoff me-2" aria-hidden="true"></i>Anfrage senden</button>
+                  <p class="disclaimer small mt-2 mb-0">Mit Absenden bestätigst du die Verarbeitung deiner Angaben gemäß unserer Datenschutzerklärung.</p>
                 </form>
               </div>
             </div>
@@ -390,7 +524,7 @@
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
       <div id="sendToast" class="toast align-items-center text-bg-success border-0" role="status" aria-live="polite" aria-atomic="true">
         <div class="d-flex">
-          <div class="toast-body"><i class="bi bi-check2-circle me-1"></i> Anfrage gesendet! Wir melden uns zeitnah.</div>
+          <div class="toast-body"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Anfrage gesendet! Wir melden uns zeitnah.</div>
           <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Schließen"></button>
         </div>
       </div>
@@ -407,10 +541,10 @@
           </div>
         </div>
         <div class="row g-4">
-          <div class="col-lg-6 reveal"><div class="p-4 border rounded-3 h-100"><h3 class="h6"><i class="bi bi-patch-check me-2 text-brand"></i>Was ist schon live?</h3><p class="text-muted small mb-0">Eventanlage, Ticketing (Stripe), Dashboard & Website-Widget. Profile (Basis). Weitere Funktionen werden phasenweise freigeschaltet.</p></div></div>
-          <div class="col-lg-6 reveal"><div class="p-4 border rounded-3 h-100"><h3 class="h6"><i class="bi bi-credit-card-2-front me-2 text-brand"></i>Wie sind die Gebühren?</h3><p class="text-muted small mb-0">5,4 % + 0,50 € All-in pro verkauftem Ticket. Bei Premium-Zahlarten kann für Käufer ein kleiner Aufpreis entstehen.</p></div></div>
-          <div class="col-lg-6 reveal"><div class="p-4 border rounded-3 h-100"><h3 class="h6"><i class="bi bi-shield-lock me-2 text-brand"></i>Wie sicher ist das?</h3><p class="text-muted small mb-0">Zahlungen via Stripe, DSGVO-konform, EU-Hosting, verschlüsselte Datenflüsse.</p></div></div>
-          <div class="col-lg-6 reveal"><div class="p-4 border rounded-3 h-100"><h3 class="h6"><i class="bi bi-diagram-3 me-2 text-brand"></i>Kann ich meine Social Accounts verknüpfen?</h3><p class="text-muted small mb-0">Ja. Werbung kann auf Wunsch im Namen deines Accounts laufen (mit Freigabe).</p></div></div>
+          <div class="col-lg-6 reveal"><div class="p-4 border rounded-3 h-100"><h3 class="h6"><i class="bi bi-patch-check me-2 text-brand" aria-hidden="true"></i>Was ist schon live?</h3><p class="text-muted small mb-0">Eventanlage, Ticketing (Stripe), Dashboard & Website-Widget. Profile (Basis). Weitere Funktionen werden phasenweise freigeschaltet.</p></div></div>
+          <div class="col-lg-6 reveal"><div class="p-4 border rounded-3 h-100"><h3 class="h6"><i class="bi bi-credit-card-2-front me-2 text-brand" aria-hidden="true"></i>Wie sind die Gebühren?</h3><p class="text-muted small mb-0">Einführungspreis: 4,4 % + 0,50 € (12 Monate). Danach: 5,4 % + 0,50 € All-in pro verkauftem Ticket. Bei Premium-Zahlarten kann für Käufer ein kleiner Aufpreis entstehen.</p></div></div>
+          <div class="col-lg-6 reveal"><div class="p-4 border rounded-3 h-100"><h3 class="h6"><i class="bi bi-shield-lock me-2 text-brand" aria-hidden="true"></i>Wie sicher ist das?</h3><p class="text-muted small mb-0">Zahlungen via Stripe, DSGVO-konform, EU-Hosting, verschlüsselte Datenflüsse.</p></div></div>
+          <div class="col-lg-6 reveal"><div class="p-4 border rounded-3 h-100"><h3 class="h6"><i class="bi bi-diagram-3 me-2 text-brand" aria-hidden="true"></i>Kann ich meine Social Accounts verknüpfen?</h3><p class="text-muted small mb-0">Ja. Werbung kann auf Wunsch im Namen deines Accounts laufen (mit Freigabe).</p></div></div>
         </div>
       </div>
     </section>
@@ -420,16 +554,16 @@
       <div class="container-fluid container-xxl">
         <div class="row g-4">
           <div class="col-md-4">
-            <div class="footer-logo"><i class="bi bi-stars"></i><span>Evently24</span></div>
+            <div class="footer-logo"><i class="bi bi-stars" aria-hidden="true"></i><span>Evently24</span></div>
             <p class="text-muted small mt-2">Alle Events. Ein Ort. Die Plattform für Veranstalter, Locations & Künstler – sichtbar, messbar, verkaufbar.</p>
             <ul class="footer-list small text-muted">
-              <li><i class="bi bi-geo-alt me-1"></i> Torstraße 123, 10119 Berlin</li>
-              <li><i class="bi bi-envelope me-1"></i> <a class="text-decoration-none" href="mailto:hello@evently24.example">hello@evently24.example</a></li>
-              <li><i class="bi bi-telephone me-1"></i> +49 (0)30 123456</li>
+              <li><i class="bi bi-geo-alt me-1" aria-hidden="true"></i> Torstraße 123, 10119 Berlin</li>
+              <li><i class="bi bi-envelope me-1" aria-hidden="true"></i> <a class="text-decoration-none text-dark" href="mailto:hello@evently24.example">hello@evently24.example</a></li>
+              <li><i class="bi bi-telephone me-1" aria-hidden="true"></i> +49 (0)30 123456</li>
             </ul>
           </div>
           <div class="col-md-4">
-            <h6 class="mb-2">Produkt</h6>
+            <h2 class="fs-6 mb-2">Produkt</h2>
             <ul class="footer-list small">
               <li><a class="text-muted text-decoration-none" href="#solution">Wie es funktioniert</a></li>
               <li><a class="text-muted text-decoration-none" href="#features">Features</a></li>
@@ -438,7 +572,7 @@
             </ul>
           </div>
           <div class="col-md-4">
-            <h6 class="mb-2">Rechtliches</h6>
+            <h2 class="fs-6 mb-2">Rechtliches</h2>
             <ul class="footer-list small">
               <li><a class="text-muted text-decoration-none" href="#" data-bs-toggle="modal" data-bs-target="#impressumModal">Impressum</a></li>
               <li><a class="text-muted text-decoration-none" href="#" data-bs-toggle="modal" data-bs-target="#datenschutzModal">Datenschutz</a></li>
@@ -446,7 +580,7 @@
             </ul>
           </div>
         </div>
-        <div class="divider-x my-4"></div>
+        <div class="divider-x my-4" aria-hidden="true"></div>
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
           <div class="small text-muted">© {{ year }} Evently24 – Alle Rechte vorbehalten.</div>
           <div class="small d-flex gap-3">
@@ -458,8 +592,8 @@
       </div>
     </footer>
 
-    <!-- Modals -->
-    <div class="modal fade" id="impressumModal" tabindex="-1" aria-hidden="true">
+    <!-- (Diese drei bleiben Bootstrap-Modals – nur die Roadmap ist Custom) -->
+    <div class="modal fade" id="impressumModal" tabindex="-1" aria-hidden="true" data-bs-scroll="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Impressum – Evently24</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button></div>
         <div class="modal-body small">
@@ -473,7 +607,7 @@
       </div></div>
     </div>
 
-    <div class="modal fade" id="datenschutzModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="datenschutzModal" tabindex="-1" aria-hidden="true" data-bs-scroll="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Datenschutz – Evently24</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button></div>
         <div class="modal-body small">
@@ -488,26 +622,26 @@
       </div></div>
     </div>
 
-    <div class="modal fade" id="agbModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="agbModal" tabindex="-1" aria-hidden="true" data-bs-scroll="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Allgemeine Geschäftsbedingungen (AGB) – Evently24</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button></div>
-        <div class="modal-body small">
-          <p><strong>Geltungsbereich:</strong> Diese AGB regeln die Nutzung der Plattform Evently24 für Veranstalter, Locations und Künstler.</p>
-          <p><strong>Leistungen:</strong> Eventverwaltung, Ticketverkauf (Stripe), Promotion-Tools, Profile, Widgets.</p>
-          <p><strong>Gebühren:</strong> 5,4% + 0,50 € je verkauftem Ticket (inkl. Zahlungsabwicklung); optionale Zusatzleistungen separat.</p>
-          <p><strong>Zahlung & Auszahlungen:</strong> Abwicklung via Stripe; Auszahlungen direkt an Veranstalter.</p>
-          <p><strong>Widerruf & Erstattungen:</strong> Regelungen je nach Event; Abwicklung nach Veranstalter-Policy.</p>
-          <p><strong>Haftung:</strong> Für leichte Fahrlässigkeit nur bei Verletzung wesentlicher Pflichten; im Übrigen nach Gesetz.</p>
-          <p><strong>Schlussbestimmungen:</strong> Deutsches Recht; Gerichtsstand Berlin, sofern zulässig.</p>
-        </div>
-        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Schließen</button></div>
+      <div class="modal-body small">
+        <p><strong>Geltungsbereich:</strong> Diese AGB regeln die Nutzung der Plattform Evently24 für Veranstalter, Locations und Künstler.</p>
+        <p><strong>Leistungen:</strong> Eventverwaltung, Ticketverkauf (Stripe), Promotion-Tools, Profile, Widgets.</p>
+        <p><strong>Gebühren:</strong> Einführungspreis 12 Monate: 4,4 % + 0,50 € je verkauftem Ticket; danach 5,4 % + 0,50 €; optionale Zusatzleistungen separat.</p>
+        <p><strong>Zahlung & Auszahlungen:</strong> Abwicklung via Stripe; Auszahlungen direkt an Veranstalter.</p>
+        <p><strong>Widerruf & Erstattungen:</strong> Regelungen je nach Event; Abwicklung nach Veranstalter-Policy.</p>
+        <p><strong>Haftung:</strong> Für leichte Fahrlässigkeit nur bei Verletzung wesentlicher Pflichten; im Übrigen nach Gesetz.</p>
+        <p><strong>Schlussbestimmungen:</strong> Deutsches Recht; Gerichtsstand Berlin, sofern zulässig.</p>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Schließen</button></div>
       </div></div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { onMounted, ref } from 'vue'
+<script setup>
+import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { useHead, definePageMeta } from '#imports'
 
 definePageMeta({
@@ -518,9 +652,9 @@ useHead({
   title: 'Evently24 – Alle Events. Ein Ort. | Beta',
   htmlAttrs: { lang: 'de' },
   meta: [
-    { name: 'description', content: 'Evently24 – Die Plattform für lokale Events. Events anlegen, Tickets verkaufen, Reichweite messen. Jetzt Beta-Partner werden.' },
+    { name: 'description', content: 'Evently24 – Events anlegen, Tickets verkaufen, Reichweite messen. Early-Adopter zahlen 12 Monate nur 4,4% + 0,50 €. Jetzt Beta-Partner werden.' },
     { property: 'og:title', content: 'Evently24 – Alle Events. Ein Ort. | Beta' },
-    { property: 'og:description', content: 'Events anlegen → Tickets verkaufen → Reichweite messen. Werde jetzt Beta-Partner.' },
+    { property: 'og:description', content: 'Events anlegen → Tickets verkaufen → Reichweite messen. Early-Adopter: 12 Monate 4,4% + 0,50 €. Werde jetzt Beta-Partner.' },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: 'https://evently.de/beta' },
     { property: 'og:image', content: 'https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?q=80&w=1200&auto=format&fit=crop' },
@@ -531,7 +665,6 @@ useHead({
   script: [
     {
       type: 'application/ld+json',
-      // Kleine Org+WebPage JSON-LD
       children: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'WebPage',
@@ -543,19 +676,108 @@ useHead({
           url: 'https://evently.de'
         },
         description:
-          'Evently24 – Events anlegen, Tickets verkaufen, Reichweite messen. Jetzt Beta-Partner werden.'
+          'Evently24 – Events anlegen, Tickets verkaufen, Reichweite messen. Early-Adopter zahlen 12 Monate nur 4,4 % + 0,50 €.'
       })
     }
   ]
 })
 
-const year = ref<number>(new Date().getFullYear())
+const year = ref(new Date().getFullYear())
+
+/** ===== Roadmap Daten ===== */
+const initialVisible = 2
+
+const phases = ref([
+  { id: 'p1', title: 'Phase 1 – Beta (Live)', badge: 'Live', badgeClass: 'badge-soft', desc: 'Eventanlage, Ticketing (Stripe), Dashboard, Website-Widget, Profile (Basis).', bullets: ['Schnelles Publizieren', 'Check-in/QR (Basis)', 'Grundlegende Analytics'] },
+  { id: 'p2', title: 'Phase 2 – Automatisierte Ads', badge: 'In Entwicklung', badgeClass: 'bg-warning-subtle text-warning-emphasis', desc: 'Meta/TikTok-Integration, Pixel, A/B-Tests, Budget-Automation.', bullets: ['Kampagnen aus Event-Templates', 'Auto-Optimierung nach Conversion', 'Retargeting-Optionen'] },
+  { id: 'p3', title: 'Phase 3 – Community & Empfehlungen', badge: 'Geplant', badgeClass: 'bg-secondary-subtle text-secondary-emphasis', desc: 'Freunde, Künstler/Location-Matching, personalisierte Feeds.', bullets: ['Folgen & Favouriten', 'Empfehlungen per Interessen', 'Social Sharing'] },
+  { id: 'p4', title: 'Phase 4 – Education (Academy)', badge: 'Geplant', badgeClass: 'bg-secondary-subtle text-secondary-emphasis', desc: 'Best Practices für Veranstalter, Locations & Künstler – kurz & praxisnah.', bullets: ['Mini-Kurse, Checklisten, Playbooks', 'Vorlagen für Eventtexte & Motive', 'Office-Hours/Q&A mit dem Team'] },
+  { id: 'p5', title: 'Phase 5 – Künstler & Coaches: Pro-Profile', badge: 'Geplant', badgeClass: 'bg-secondary-subtle text-secondary-emphasis', desc: 'Erweiterte Profile mit Booking-Optionen und Referenzen.', bullets: ['Buchungsanfragen & Verfügbarkeiten', 'Media-Kit, Presets & Bewertungen', 'Terminkalender & Serien-Events'] },
+  { id: 'p6', title: 'Phase 6 – Locations: Räume & Belegung', badge: 'Geplant', badgeClass: 'bg-secondary-subtle text-secondary-emphasis', desc: 'Raumverwaltung, Kapazitäten, Ausstattung, Belegungsübersicht.', bullets: ['Mehrere Räume/Areas', 'Blocker & Optionen', 'Website-Widget mit Filter'] },
+  { id: 'p7', title: 'Phase 7 – Integrationen & API', badge: 'Geplant', badgeClass: 'bg-secondary-subtle text-secondary-emphasis', desc: 'Zapier/Make, Kalender-Sync, öffentliche API.', bullets: ['Google/Apple Calendar Sync', 'Webhook-Events', 'Export CSV/JSON'] },
+  { id: 'p8', title: 'Phase 8 – Mobile App (Attendee & Orga)', badge: 'Geplant', badgeClass: 'bg-secondary-subtle text-secondary-emphasis', desc: 'Check-in, Wallet-Tickets, Push-Benachrichtigungen & Vor-Ort-Verkauf (PoS).', bullets: ['Scanner-Modus', 'Offline-Fallback', 'Live-KPIs auf dem Handy'] },
+  { id: 'p9', title: 'Phase 9 – Sponsoring & Partner-Marketplace', badge: 'Geplant', badgeClass: 'bg-secondary-subtle text-secondary-emphasis', desc: 'Monetarisierung für Veranstalter/Locations über lokale Sponsoren.', bullets: ['Sponsor-Slots in Routen', 'Co-Branding-Tickets', 'Revenue-Share-Modelle'] }
+])
+
+/** ===== Custom Modal State & Logic ===== */
+const showRoadmap = ref(false)
+const modalRef = ref(null)
+const openRoadmapBtn = ref(null)
+let scrollYCache = 0
+let lastFocused = null
+let keydownHandler = null
+
+function lockScroll() {
+  scrollYCache = window.scrollY || document.documentElement.scrollTop || 0
+  document.body.style.position = 'fixed'
+  document.body.style.top = `-${scrollYCache}px`
+  document.body.style.left = '0'
+  document.body.style.right = '0'
+  document.body.style.width = '100%'
+}
+
+function unlockScroll() {
+  document.body.style.position = ''
+  document.body.style.top = ''
+  document.body.style.left = ''
+  document.body.style.right = ''
+  document.body.style.width = ''
+  window.scrollTo(0, scrollYCache)
+}
+
+function focusTrap(e) {
+  if (e.key !== 'Tab') return
+  const root = modalRef.value
+  if (!root) return
+  const focusables = root.querySelectorAll(
+    'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+  )
+  if (!focusables.length) return
+  const first = focusables[0]
+  const last = focusables[focusables.length - 1]
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault()
+    last.focus()
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault()
+    first.focus()
+  }
+}
+
+function onKeydown(e) {
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    closeModal()
+  } else {
+    focusTrap(e)
+  }
+}
+
+function openModal() {
+  lastFocused = document.activeElement
+  showRoadmap.value = true
+  setTimeout(() => {
+    lockScroll()
+    keydownHandler = (ev) => onKeydown(ev)
+    document.addEventListener('keydown', keydownHandler)
+    const firstFocusable =
+      modalRef.value?.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    ;(firstFocusable || modalRef.value)?.focus()
+  }, 0)
+}
+
+function closeModal() {
+  document.removeEventListener('keydown', keydownHandler || (()=>{}))
+  unlockScroll()
+  showRoadmap.value = false
+  setTimeout(() => {
+    openRoadmapBtn.value?.focus()
+  }, 0)
+}
 
 onMounted(() => {
-  const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-
   // Progressbar
-  const progressbar = document.querySelector<HTMLElement>('.progressbar')
+  const progressbar = document.querySelector('.progressbar')
   const onScroll = () => {
     const h = document.documentElement
     const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight)
@@ -565,7 +787,8 @@ onMounted(() => {
   onScroll()
 
   // Reveal
-  const reveals = document.querySelectorAll<HTMLElement>('.reveal')
+  const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  const reveals = document.querySelectorAll('.reveal')
   if (!prefersReduced && 'IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
@@ -581,11 +804,11 @@ onMounted(() => {
   }
 
   // KPI CountUp
-  function countUp(el: HTMLElement, to: number, { duration = 1100, suffix = '' } = {}) {
+  function countUp(el, to, { duration = 1100, suffix = '' } = {}) {
     const start = performance.now()
     const from = 0
     const decimals = (to + '').includes('.') ? (to + '').split('.')[1].length : 0
-    function tick(now: number) {
+    function tick(now) {
       const p = Math.min(1, (now - start) / duration)
       const eased = 1 - Math.pow(1 - p, 3)
       const val = from + (to - from) * eased
@@ -594,7 +817,7 @@ onMounted(() => {
     }
     requestAnimationFrame(tick)
   }
-  const kpiBox = document.querySelectorAll<HTMLElement>('[data-countup]')
+  const kpiBox = document.querySelectorAll('[data-countup]')
   if (kpiBox.length) {
     const kpiIO = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
@@ -612,31 +835,29 @@ onMounted(() => {
   }
 
   // Audience indicator
-  const nav = document.querySelector<HTMLElement>('.audience-nav')
-  const indicator = document.querySelector<HTMLElement>('.audience-indicator')
-  const tabs = nav ? Array.from(nav.querySelectorAll<HTMLButtonElement>('.nav-link')) : []
-  function moveIndicator(active: HTMLElement) {
-    const idx = tabs.indexOf(active as HTMLButtonElement)
-    if (idx < 0 || !indicator) return
-    const rects = tabs.map((t) => t.getBoundingClientRect().width)
-    const padLeft = 4
-    const x = rects.slice(0, idx).reduce((a, b) => a + b, 0) + padLeft
-    indicator.style.width = rects[idx] + 'px'
+  const nav = document.querySelector('.audience-nav')
+  const indicator = document.querySelector('.audience-indicator')
+  const tabs = nav ? Array.from(nav.querySelectorAll('.nav-link')) : []
+  function moveIndicator(active) {
+    if (!indicator || !active) return
+    const x = active.offsetLeft
+    const w = active.offsetWidth
+    indicator.style.width = w + 'px'
     indicator.style.transform = `translateX(${x}px)`
   }
-  tabs.forEach((btn) => btn.addEventListener('shown.bs.tab' as any, (e: any) => moveIndicator(e.target)))
+  tabs.forEach((btn) => btn.addEventListener('shown.bs.tab', (e) => moveIndicator(e.target)))
   window.addEventListener('load', () => {
-    const active = nav?.querySelector('.nav-link.active') as HTMLElement | null
+    const active = nav?.querySelector('.nav-link.active')
     if (active) moveIndicator(active)
   })
   window.addEventListener('resize', () => {
-    const active = nav?.querySelector('.nav-link.active') as HTMLElement | null
+    const active = nav?.querySelector('.nav-link.active')
     if (active) moveIndicator(active)
   })
 
   // Feature card ripple cursor
-  document.querySelectorAll<HTMLElement>('.card-feature').forEach((card) => {
-    card.addEventListener('pointermove', (e: PointerEvent) => {
+  document.querySelectorAll('.card-feature').forEach((card) => {
+    card.addEventListener('pointermove', (e) => {
       const r = card.getBoundingClientRect()
       const mx = (((e.clientX - r.left) / r.width) * 100).toFixed(2) + '%'
       const my = (((e.clientY - r.top) / r.height) * 100).toFixed(2) + '%'
@@ -646,11 +867,9 @@ onMounted(() => {
   })
 
   // Toast submit
-  const form = document.getElementById('betaForm') as HTMLFormElement | null
+  const form = document.getElementById('betaForm')
   form?.addEventListener('submit', (e) => {
     e.preventDefault()
-    // bootstrap aus dem Bundle
-    // @ts-ignore
     const toast = new window.bootstrap.Toast(document.getElementById('sendToast'), { delay: 2500 })
     toast.show()
     form.reset()
@@ -658,11 +877,11 @@ onMounted(() => {
 
   // Keyword-Cloud
   ;(() => {
-    const container = document.querySelector<HTMLElement>('.bg-tags')
+    const container = document.querySelector('.bg-tags')
     if (!container) return
     const words = ['Tickets','Stripe','A/B-Tests','Reach','Engagement','KPIs','Conversion','Meta Ads','TikTok Ads','Tracking','Widget','Dashboard','Insights','Promo','Check-in','QR','DSGVO','EU-Hosting','Realtime','Budget','Fans','Community','Matching','Feed','Location','Artist','Coach']
     const count = 22
-    const rand = (min: number, max: number) => Math.random() * (max - min) + min
+    const rand = (min, max) => Math.random() * (max - min) + min
     for (let i = 0; i < count; i++) {
       const s = document.createElement('span')
       s.textContent = words[Math.floor(Math.random() * words.length)]
@@ -676,6 +895,12 @@ onMounted(() => {
     }
   })()
 })
+
+onBeforeUnmount(() => {
+  if (showRoadmap.value) {
+    closeModal()
+  }
+})
 </script>
 
 <style>
@@ -684,6 +909,7 @@ onMounted(() => {
   --ink:#111827; --muted:#6B7280; --bg:#0e0f14; --soft:#F5F7FB;
   --space-4:3.5rem; --space-5:6rem;
 }
+
 body{ color:var(--ink); background:#fff }
 .py-6{ padding-block:var(--space-4) }
 @media (min-width:992px){ .py-6{ padding-block:var(--space-5) } }
@@ -694,7 +920,41 @@ body{ color:var(--ink); background:#fff }
 
 /* Progressbar */
 .progressbar{ position:fixed; top:0; left:0; height:3px; width:0%; background:linear-gradient(90deg,var(--brandA),var(--brandB));
-  z-index:1080; box-shadow:0 0 12px rgba(79,70,229,.45); transform-origin:left center }
+  z-index:1088; box-shadow:0 0 12px rgba(79,70,229,.45); transform-origin:left center }
+
+/* ===== TOP TICKER ===== */
+.top-ticker{
+  position:sticky; top:0; z-index:999; /* über Navbar, unter Progressbar */
+  background:linear-gradient(90deg, rgba(79,70,229,.08), rgba(6,182,212,.08));
+  border-bottom:1px solid rgba(79,70,229,.25);
+  color:#1f2937;
+  font-weight:600;
+  font-size:.9rem;
+}
+.ticker-viewport{ overflow:hidden }
+.ticker-track{
+  display:flex; align-items:center; gap:3rem; white-space:nowrap;
+  /* Start links (negativ), nach rechts zu 0 -> LTR Endlosschleife */
+  transform: translateX(-50%);
+  animation: ticker-ltr 28s linear infinite;
+  will-change: transform;
+}
+.ticker-group{
+  display:flex; align-items:center; gap:2rem; padding:.5rem 1rem; margin: 0;
+}
+.ticker-item{
+  display:inline-flex; align-items:center; gap:.5rem;
+}
+.ticker-item i{ color:var(--brandA) }
+
+/* LTR Endlos-Motion: von -50% nach 0%, mit doppelter Gruppe für nahtlosen Loop */
+@keyframes ticker-ltr{
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
+}
+@media (prefers-reduced-motion: reduce){
+  .ticker-track{ animation:none; transform:none }
+}
 
 /* Buttons */
 .btn-brand,.chip-animated{ color:#fff!important; border:none; background-image:linear-gradient(120deg,var(--brandA),var(--brandB),var(--brandA));
@@ -725,6 +985,15 @@ body{ color:var(--ink); background:#fff }
 /* Gradient Headlines */
 .grad-title{ background:linear-gradient(120deg,var(--brandA),var(--brandB)); -webkit-background-clip:text; background-clip:text; color:transparent }
 
+/* Gradient alert (hero hint) – Text weiß */
+.alert-gradient{
+  background:linear-gradient(120deg, rgba(79,70,229,.15), rgba(6,182,212,.15));
+  border:1px solid rgba(79,70,229,.35);
+  color:#fff;
+  padding:.4rem .65rem;
+  border-radius:.5rem
+}
+
 /* Hero */
 .hero{ position:relative; overflow:hidden; color:#fff; background:var(--bg) }
 .hero::before,.hero::after{ content:""; position:absolute; border-radius:50%; filter:blur(60px); opacity:.45; pointer-events:none }
@@ -746,9 +1015,12 @@ body{ color:var(--ink); background:#fff }
 .audience-nav{ position:relative; display:inline-flex; padding:.25rem; background:#fff; border-radius:1rem; border:1px solid #e6e8ef }
 .audience-nav .nav-link{ border:0; border-radius:.75rem; padding:.65rem 1rem; color:#374151; display:flex; align-items:center; gap:.5rem; background:transparent; z-index:1 }
 .audience-nav .nav-link.active{ color:#111827 }
-.audience-indicator{ position:absolute; top:.25rem; bottom:.25rem; left:.25rem; width:33%;
+.audience-indicator{
+  position:absolute; top:.25rem; bottom:.25rem; left:0;
+  width:33%;
   background:linear-gradient(120deg, rgba(79,70,229,.08), rgba(6,182,212,.08)); border:1px solid rgba(79,70,229,.35); border-radius:.75rem;
-  transition:transform .35s, width .35s }
+  transition:transform .35s, width .35s; will-change:transform,width;
+}
 
 /* Reveal */
 .reveal{ opacity:0; transform:translateY(16px); transition:opacity .6s, transform .6s }
@@ -803,6 +1075,52 @@ body{ color:var(--ink); background:#fff }
 .route-chip{ background:linear-gradient(120deg, rgba(79,70,229,.08), rgba(6,182,212,.08)); border:1px solid rgba(79,70,229,.25);
   padding:.45rem .8rem; border-radius:999px; font-weight:500; display:inline-flex; gap:.4rem; align-items:center }
 .route-chip i{ color:var(--brandA) }
+
+/* Roadmap (inline) */
+.roadmap-list{
+  list-style:none; padding-left:0;
+  margin:0 auto 1rem;
+  counter-reset: step;
+  max-width: 760px;
+}
+.roadmap-step{ background:#fff; border:1px solid #eef1f7; border-radius:.75rem; text-align: left; margin-inline: auto; }
+.step-index{
+  width:36px; height:36px; border-radius:50%; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  background:linear-gradient(120deg, rgba(79,70,229,.12), rgba(6,182,212,.12)); border:1px solid rgba(79,70,229,.35);
+  font-weight:700; color:#364152
+}
+
+/* Roadmap in Modal: volle Breite */
+.modal-roadmap-list{ max-width:100%; }
+
+/* ===== CUSTOM MODAL ===== */
+.custom-modal-backdrop{
+  position:fixed; inset:0; z-index:1085;
+  display:flex; align-items:center; justify-content:center;
+  background: rgba(10, 12, 16, .45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 24px;
+}
+.custom-modal{
+  background:#fff; color:var(--ink);
+  width:min(100%, 600px);
+  max-height: calc(100vh - 48px);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(17,24,39,.25);
+  display:flex; flex-direction:column;
+  outline: none;
+}
+.custom-modal-header, .custom-modal-footer{
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef1f7;
+}
+.custom-modal-footer{ border-top:1px solid #eef1f7; border-bottom:0; }
+.custom-modal-header{ display:flex; align-items:center; justify-content:space-between; gap:12px }
+.custom-modal-body{
+  padding: 16px;
+  overflow: auto;
+}
 
 /* Footer */
 .footer-list{ list-style:none; padding:0; margin:0 }

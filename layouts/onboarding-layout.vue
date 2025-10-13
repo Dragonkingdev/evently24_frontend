@@ -1,13 +1,17 @@
+<!-- layouts/onboarding-layout.vue -->
 <template>
   <!-- Minimalistisches Onboarding-Layout: kümmert sich um Head-Assets & Slot -->
   <div id="onboarding-layout">
     <NuxtLoadingIndicator />
     <slot />
+    <ClientOnly>
+      <Chatbot />
+    </ClientOnly>
   </div>
 </template>
 
-<script setup lang="ts">
-
+<script setup>
+import Chatbot from '~/components/Chatbot.vue'
 </script>
 
 <style>
