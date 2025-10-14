@@ -1,3 +1,4 @@
+<!--components/new/Locations.vue-->
 <script setup>
 import LocationTile from '~/components/new/tiles/LocationTile.vue'
 

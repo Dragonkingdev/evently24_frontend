@@ -1,3 +1,4 @@
+<!--components/new/RegionMTrendingodal.vue-->
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import EventCard from '~/components/new/cards/EventCard.vue'

@@ -1,3 +1,4 @@
+<!--components/new/Festivals.vue-->
 <script setup>
 import EventCard from '~/components/new/cards/EventCard.vue'
 const festivals = [

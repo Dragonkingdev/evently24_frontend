@@ -1,8 +1,9 @@
+<!--layout/default.vue-->
 <script setup>
 import Navbar from '~/components/new/Navbar.vue'
 import Footer from '~/components/new/Footer.vue'
 import RegionModal from '~/components/new/RegionModal.vue'
-import FiltersOffcanvas from '~/components/new/FiltersOffcanvas.vue'
+import FiltersDrawer from '~/components/new/FiltersDrawer.vue'
 </script>
 
 <template>
@@ -12,22 +13,13 @@ import FiltersOffcanvas from '~/components/new/FiltersOffcanvas.vue'
       <slot />
     </main>
     <Footer />
-    <!-- Global Modals/Offcanvas -->
+
     <RegionModal />
-    <FiltersOffcanvas />
+    <FiltersDrawer />
   </div>
 </template>
 
 <style scoped>
-main{ 
-  background:#fff;
-  padding-top: 54px; 
-}
-
-@media (max-width: 768px){
-  main{ 
-    padding-top: 100px; 
-  }
-}
-
+main{ background:#fff; padding-top: 54px; }
+@media (max-width: 768px){ main{ padding-top: 100px; } }
 </style>

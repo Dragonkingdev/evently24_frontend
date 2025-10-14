@@ -1,3 +1,4 @@
+<!--components/new/Newslater.vue-->
 <template>
   <section class="py-5 bg-light">
     <div class="container-fluid container-xxl">

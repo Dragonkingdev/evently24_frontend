@@ -1,3 +1,4 @@
+<!--components/new/FiltersOffcanvas.vue-->
 <template>
   <div class="offcanvas offcanvas-end" tabindex="-1" id="filters" aria-labelledby="filtersLabel">
     <div class="offcanvas-header">

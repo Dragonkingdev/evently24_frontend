@@ -1,79 +1,38 @@
-<script setup lang="ts">
-import { onMounted } from 'vue'
-const region = useState<string>('region')
+<!-- components/new/Hero.vue -->
+<script setup>
+import { useRegion } from '~/composables/useRegion'
+const { region } = useRegion()
 
-onMounted(() => {
-  const heroCarousel = document.getElementById('featureCarousel')
-  if (!heroCarousel) return
-  // @ts-ignore
-  //new bootstrap.Carousel(heroCarousel, { interval: 5000, ride: 'carousel' })
-})
+const openRegion = useState('regionModalOpen')
+const openFilters = useState('filtersOpen')
 </script>
 
 <template>
-  <section class="hero py-3 py-md-4">
-    <div class="container-fluid container-xxl">
-      <div class="row align-items-center g-4">
-        <div class="col-lg-6">
-          <div class="eyebrow mb-2">Jetzt & demnächst in <span>{{ region }}</span></div>
-          <h1 class="display-5 fw-bold">Entdecke Events, die <span class="text-primary">wirklich</span> zu dir passen.</h1>
-          <p class="lead text-secondary">Von Stadtfest bis Techno-Nacht – scrolle dich durch Live-Videos, Highlights & personalisierte Empfehlungen. Tickets direkt sichern oder teilen.</p>
-          <div class="d-flex gap-2">
-            <button class="btn btn-brand btn"><i class="bi bi-ticket-perforated"></i> Jetzt Tickets finden</button>
-            <button class="btn btn-outline-primary btn" data-bs-toggle="modal" data-bs-target="#regionModal"><i class="bi bi-geo"></i> Region ändern</button>
-          </div>
-          <div class="mt-3 d-flex flex-wrap gap-2">
-            <span class="category-pill active">Heute Abend</span>
-            <span class="category-pill">Dieses Wochenende</span>
-            <span class="category-pill">Für dich</span>
-            <span class="category-pill">Familie</span>
-            <span class="category-pill">Open Air</span>
-            <span class="category-pill">Nightlife</span>
-          </div>
+  <section class="hero">
+    <div class="wrap">
+      <div class="content">
+        <div class="eyebrow">Jetzt & demnächst in <span>{{ region }}</span></div>
+        <h1>Entdecke Events im <span>Reels-Format</span>.</h1>
+        <p>Scroll wie durch Stories: 9:16 Video-/Bild-Reels für Events, Locations & Artists. Tickets direkt sichern.</p>
+
+        <div class="actions">
+          <NuxtLink to="#trending" class="btn brand"><i class="bi bi-ticket-perforated"></i> Jetzt stöbern</NuxtLink>
+          <button class="btn ghost" @click="openRegion=true"><i class="bi bi-geo"></i> Region ändern</button>
+          <button class="btn ghost" @click="openFilters=true"><i class="bi bi-funnel"></i> Filter</button>
         </div>
 
-        <div class="col-lg-6">
-          <div id="featureCarousel" class="carousel slide" data-bs-ride="carousel">
-            <div class="carousel-indicators">
-              <button type="button" data-bs-target="#featureCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-              <button type="button" data-bs-target="#featureCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
-              <button type="button" data-bs-target="#featureCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
-            </div>
-            <div class="carousel-inner rounded-4 shadow-lg">
-              <div class="carousel-item active">
-                <div class="position-relative">
-                  <video class="w-100" playsinline muted loop preload="metadata" poster="https://images.unsplash.com/photo-1506157786151-b8491531f063?q=80&w=1200&auto=format&fit=crop">
-                    <source src="https://cdn.coverr.co/videos/coverr-people-at-a-concert-2924/1080p.mp4" type="video/mp4">
-                  </video>
-                  <div class="caption-grad">
-                    <h5 class="mb-1">Castle Beats Festival</h5>
-                    <p class="mb-2">Burg Ehrenfels • 27–29 Sep • Techno / House</p>
-                    <div class="d-flex gap-2">
-                      <a href="#" class="btn btn-sm btn-light"><i class="bi bi-ticket"></i> Tickets</a>
-                      <button class="btn btn-sm btn-outline-light"><i class="bi bi-bookmark"></i> Merken</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="carousel-item">
-                <img class="d-block w-100" alt="Straßenfest" src="https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?q=80&w=1200&auto=format&fit=crop">
-                <div class="carousel-caption text-start">
-                  <h5>Altstadt Straßenfest</h5>
-                  <p>Foodtrucks, Live-Bands & Kunsthandwerk • Sa 21 Sep</p>
-                </div>
-              </div>
-
-              <div class="carousel-item">
-                <img class="d-block w-100" alt="Open Air Kino" src="https://images.unsplash.com/photo-1535016120720-40c646be5581?q=80&w=1200&auto=format&fit=crop">
-                <div class="carousel-caption text-end">
-                  <h5>Open Air Kino am Rhein</h5>
-                  <p>Heute 21:30 • Klassiker & Popcorn</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div><!-- /col -->
+        <div class="chips">
+          <span class="chip active">Heute Abend</span>
+          <span class="chip">Dieses Wochenende</span>
+          <span class="chip">Für dich</span>
+          <span class="chip">Open Air</span>
+          <span class="chip">Nightlife</span>
+        </div>
+      </div>
+      <div class="art">
+        <div class="card"></div>
+        <div class="card b"></div>
+        <div class="card c"></div>
       </div>
     </div>
   </section>
@@ -81,22 +40,38 @@ onMounted(() => {
 
 <style scoped>
 :root{
-  --brand:#5b7cfa;
-  --brand-dark:#3b57c9;
-  --soft:#f5f7ff;
+  --brand:#5b7cfa; --brand-dark:#3b57c9; --soft:#f5f7ff;
 }
 .hero{
-  background: radial-gradient(1200px 600px at 0% -10%, rgba(91,124,250,.25), transparent),
-              radial-gradient(1200px 600px at 100% -10%, rgba(91,124,250,.25), transparent),
-              linear-gradient(180deg, #ffffff 0%, #f9faff 100%);
+  background:
+    radial-gradient(1200px 600px at 0% -10%, rgba(91,124,250,.25), transparent),
+    radial-gradient(1200px 600px at 100% -10%, rgba(91,124,250,.25), transparent),
+    linear-gradient(180deg, #ffffff 0%, #f9faff 100%);
+  padding: 1.5rem 0 1rem;
 }
+.wrap{ max-width:1320px; margin:0 auto; padding:0 1rem; display:grid; gap:2rem; grid-template-columns: 1.1fr .9fr; align-items:center; }
+@media (max-width: 992px){ .wrap{ grid-template-columns: 1fr; } }
 .eyebrow{font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; color:#6c7a91;}
-.btn-brand{background:var(--brand); border-color:var(--brand);}
-.btn-brand:hover{background:var(--brand-dark); border-color:var(--brand-dark);}
-.category-pill{border-radius:3rem; padding:.35rem .8rem; border:1px solid #e9ecf5; background:#fff; font-weight:600;}
-.category-pill.active{background:var(--soft); border-color:#dfe6ff; color:#2e3a8c;}
-.caption-grad{
-  position:absolute; bottom:0; left:0; right:0; color:#fff; padding:1rem;
-  background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.7) 90%);
+h1{ font-size: clamp(1.8rem, 2.2vw + 1rem, 3rem); font-weight:900; letter-spacing:-.01em; }
+h1 span{ color:var(--brand); }
+p{ color:#475467; max-width:52ch; }
+.actions{ display:flex; gap:.5rem; flex-wrap:wrap; margin:.75rem 0; }
+.btn{ border-radius:12px; padding:.65rem .9rem; border:1px solid transparent; font-weight:800; }
+.btn.brand{ background:var(--brand); border-color:var(--brand); color:#fff;}
+.btn.brand:hover{ background:var(--brand-dark); border-color:var(--brand-dark);}
+.btn.ghost{ background:#fff; border-color:#e9ecf5; }
+.btn.ghost:hover{ background:#f8faff; border-color:#dfe6ff; }
+.chips{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.25rem; }
+.chip{ border-radius:999px; padding:.35rem .8rem; border:1px solid #e9ecf5; background:#fff; font-weight:700; }
+.chip.active{ background:var(--soft); border-color:#dfe6ff; color:#2e3a8c; }
+
+.art{ position:relative; height: 420px; }
+@media (max-width: 992px){ .art{ height: 300px; } }
+.card{
+  position:absolute; width: 210px; aspect-ratio:9/16; border-radius:18px;
+  background: linear-gradient(180deg,#a5b4fc 0%,#6366f1 100%); box-shadow:0 30px 60px rgba(37, 99, 235, .25);
+  top:40px; right:20%; transform: rotate(-8deg);
 }
+.card.b{ background: linear-gradient(180deg,#fbcfe8 0%,#f472b6 100%); top:80px; right:0; transform: rotate(6deg); }
+.card.c{ background: linear-gradient(180deg,#6ee7b7 0%,#10b981 100%); top:160px; right:12%; transform: rotate(-2deg); }
 </style>

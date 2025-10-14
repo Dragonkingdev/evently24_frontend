@@ -1,373 +1,212 @@
-<template>
-  <header class="nav-shell fixed-top" v-if="authReady">
-    <div class="container-fluid d-flex justify-content-between align-items-center py-2">
-      <!-- Left: Logo -->
-      <NuxtLink to="/" class="nav-logo d-flex align-items-center mr-2">
-        <i class="bi bi-ticket-perforated-fill me-2 text-primary"></i> MyEventVerse
-      </NuxtLink>
-
-      <!-- Center: Desktop Search (wie neue Navbar) -->
-      <form class="search-desktop d-none d-md-flex flex-grow-1 mx-3" role="search" @submit.prevent>
-        <div class="input-group">
-          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-          <input v-model="query" class="form-control" type="search" placeholder="Suche nach Events, Festivals, Locations, Artists…" />
-          <button class="btn btn-outline-secondary d-none d-md-inline" type="button" data-bs-toggle="offcanvas" data-bs-target="#filters">
-            <i class="bi bi-sliders"></i> Filter
-          </button>
-        </div>
-      </form>
-
-      <!-- Right: Actions -->
-      <div class="nav-actions d-flex align-items-center">
-        <NuxtLink to="/explore" class="btn btn-link text-decoration-none d-none d-lg-inline-flex">
-          <i class="bi bi-compass"></i><span class="ms-1">Entdecken</span>
-        </NuxtLink>
-
-        <!-- Desktop: Login / Profile -->
-        <NuxtLink
-          v-if="!isLoggedIn"
-          to="/auth/lookup"
-          class="btn btn-link text-decoration-none d-none d-lg-inline-flex"
-        >
-          <i class="bi bi-person-circle"></i><span class="ms-1">Login</span>
-        </NuxtLink>
-
-        <div
-          v-else
-          class="position-relative d-none d-lg-inline-flex"
-          ref="menuWrap"
-        >
-          <!-- Toggle Button -->
-          <button
-            class="btn btn-link text-decoration-none d-inline-flex align-items-center"
-            @click="toggleMenu"
-            @keydown.down.prevent="openMenuAndFocusFirst"
-            @keydown.enter.prevent="toggleMenu"
-            @keydown.space.prevent="toggleMenu"
-            :aria-expanded="menuOpen ? 'true' : 'false'"
-            aria-haspopup="menu"
-            ref="menuButton"
-            title="Profil"
-          >
-            <span class="position-relative">
-              <i class="bi bi-person-circle"></i>
-              <span class="status-dot" aria-label="eingeloggt"></span>
-            </span>
-            <span class="ms-1 d-none d-xl-inline">{{ currentUser }}</span>
-          </button>
-
-          <!-- Dropdown -->
-          <ul
-            v-show="menuOpen"
-            class="menu-dropdown"
-            role="menu"
-            ref="menuEl"
-            @keydown.esc.stop.prevent="closeMenuAndFocusButton"
-            @keydown.up.prevent="focusPrev"
-            @keydown.down.prevent="focusNext"
-          >
-            <li role="none">
-              <NuxtLink role="menuitem" tabindex="-1" to="/account" class="menu-item" @click="closeMenu">
-                <i class="bi bi-person-badge me-2"></i> Account
-              </NuxtLink>
-            </li>
-            <li role="none">
-              <NuxtLink role="menuitem" tabindex="-1" to="/tickets" class="menu-item" @click="closeMenu">
-                <i class="bi bi-qr-code-scan me-2"></i> Meine Tickets
-              </NuxtLink>
-            </li>
-            <li role="none">
-              <NuxtLink role="menuitem" tabindex="-1" to="/orders" class="menu-item" @click="closeMenu">
-                <i class="bi bi-receipt me-2"></i> Bestellungen
-              </NuxtLink>
-            </li>
-            <li role="none">
-              <NuxtLink role="menuitem" tabindex="-1" to="/business" class="menu-item" @click="closeMenu">
-                <i class="bi bi-briefcase me-2"></i> Business
-              </NuxtLink>
-            </li>
-            <li role="none">
-              <button role="menuitem" tabindex="-1" class="menu-item btn-reset" @click="handleLogout">
-                <i class="bi bi-box-arrow-right me-2"></i> Logout
-              </button>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Mobile quick icons -->
-        <NuxtLink to="/explore" class="btn btn-link text-decoration-none d-lg-none">
-          <i class="bi bi-compass"></i>
-        </NuxtLink>
-
-        <!-- Mobile: Login / Profile -->
-        <NuxtLink
-          v-if="!isLoggedIn"
-          to="/auth/lookup"
-          class="btn btn-link text-decoration-none d-lg-none"
-          title="Login"
-        >
-          <i class="bi bi-person-circle"></i>
-        </NuxtLink>
-
-        <div v-else class="position-relative d-lg-none" ref="menuWrapMobile">
-          <button
-            class="btn btn-link text-decoration-none"
-            @click="toggleMenuMobile"
-            :aria-expanded="menuOpenMobile ? 'true' : 'false'"
-            aria-haspopup="menu"
-            ref="menuButtonMobile"
-            title="Profil"
-          >
-            <span class="position-relative">
-              <i class="bi bi-person-circle"></i>
-              <span class="status-dot"></span>
-            </span>
-          </button>
-
-          <ul
-            v-show="menuOpenMobile"
-            class="menu-dropdown menu-dropdown-mobile"
-            role="menu"
-            ref="menuElMobile"
-            @keydown.esc.stop.prevent="closeMenuMobileAndFocusButton"
-          >
-            <li role="none">
-              <NuxtLink role="menuitem" tabindex="-1" to="/account" class="menu-item" @click="closeMenuMobile">
-                <i class="bi bi-person-badge me-2"></i> Account
-              </NuxtLink>
-            </li>
-           <li role="none">
-              <NuxtLink role="menuitem" tabindex="-1" to="/tickets" class="menu-item" @click="closeMenuMobile">
-                <i class="bi bi-qr-code-scan me-2"></i> Meine Tickets
-              </NuxtLink>
-            </li>
-            <li role="none">
-              <NuxtLink role="menuitem" tabindex="-1" to="/orders" class="menu-item" @click="closeMenuMobile">
-                <i class="bi bi-receipt me-2"></i> Bestellungen
-              </NuxtLink>
-            </li>
-            <li role="none">
-              <NuxtLink role="menuitem" tabindex="-1" to="/business" class="menu-item" @click="closeMenuMobile">
-                <i class="bi bi-briefcase me-2"></i> Business
-              </NuxtLink>
-            </li>
-            <li role="none">
-              <button role="menuitem" tabindex="-1" class="menu-item btn-reset" @click="handleLogout">
-                <i class="bi bi-box-arrow-right me-2"></i> Logout
-              </button>
-            </li>
-          </ul>
-        </div>
-
-        <!-- NEU: Region-Button an Stelle des Warenkorbs -->
-        <button
-          class="btn btn-sm btn-primary ms-1"
-          data-bs-toggle="modal"
-          data-bs-target="#regionModal"
-        >
-          <i class="bi bi-geo-alt me-1"></i>
-          <span class="d-none d-sm-inline">{{ region }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Mobile full-width search unter navbar (wie neue Navbar) -->
-    <form class="d-md-none px-2 pb-2" role="search" @submit.prevent>
-      <div class="input-group">
-        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-        <input v-model="query" class="form-control" type="search" placeholder="Suche nach Events, Festivals, Locations, Artists…" />
-        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#filters">
-          <i class="bi bi-sliders"></i>
-        </button>
-      </div>
-    </form>
-  </header>
-</template>
-
+<!-- components/new/Navbar.vue -->
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useRouter } from '#app'
-import { useAuth } from '@/composables/useAuth'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import SearchBar from '~/components/search/SearchBar.vue'
 import { useRegion } from '~/composables/useRegion'
+import { useAuth } from '~/composables/useAuth'
 
 const { region } = useRegion()
-const query = ref('')
+const openRegion = useState('regionModalOpen')
 
-const router = useRouter()
-const { isLoggedIn, user, authReady, fetchUser, logout: authLogout } = useAuth()
+// Auth
+const { user, authReady, isLoggedIn, fetchUser, logout } = useAuth()
 
-if (process.server) {
-  await fetchUser().catch(() => {})
-}
-
-const currentUser = computed(() => {
-  const u = user?.value
-  return u && u.email ? u.email : 'Gast'
-})
-
-/** Desktop dropdown state + refs */
-const menuOpen = ref(false)
-const menuWrap = ref(null)
-const menuButton = ref(null)
-const menuEl = ref(null)
-const focusIndex = ref(0)
-
-/** Mobile dropdown state + refs */
-const menuOpenMobile = ref(false)
-const menuWrapMobile = ref(null)
-const menuButtonMobile = ref(null)
-const menuElMobile = ref(null)
-
-/** Outside click handling */
-function onDocClick(e) {
-  if (menuOpen.value && menuWrap.value && !menuWrap.value.contains(e.target)) {
-    menuOpen.value = false
-  }
-  if (menuOpenMobile.value && menuWrapMobile.value && !menuWrapMobile.value.contains(e.target)) {
-    menuOpenMobile.value = false
-  }
-}
-
-function onDocKeydown(e) {
-  if (e.key === 'Escape') {
-    if (menuOpen.value) {
-      closeMenuAndFocusButton()
-    }
-    if (menuOpenMobile.value) {
-      closeMenuMobileAndFocusButton()
-    }
-  }
-}
-
+// beim ersten Mount sicherstellen, dass wir den User haben
 onMounted(() => {
-  document.addEventListener('click', onDocClick)
-  document.addEventListener('keydown', onDocKeydown)
+  if (!authReady.value) fetchUser().catch(()=>{})
 })
 
-onBeforeUnmount(() => {
-  document.removeEventListener('click', onDocClick)
-  document.removeEventListener('keydown', onDocKeydown)
-})
+// Account-Dropdown
+const accountOpen = ref(false)
+function closeAccountMenu(){ accountOpen.value = false }
 
-/** Desktop menu controls */
-function toggleMenu() {
-  menuOpen.value = !menuOpen.value
-  if (menuOpen.value) {
-    nextTick(() => focusFirst())
+function onProfileClick () {
+  if (!isLoggedIn.value) {
+    // nicht eingeloggt -> direkt zu /lookup
+    return navigateTo('/auth/lookup')
   }
-}
-function closeMenu() { menuOpen.value = false }
-function closeMenuAndFocusButton() {
-  menuOpen.value = false
-  menuButton.value?.focus()
-}
-function openMenuAndFocusFirst() {
-  menuOpen.value = true
-  nextTick(() => focusFirst())
-}
-function focusableItems() {
-  return Array.from(menuEl.value?.querySelectorAll('[role="menuitem"]') || [])
-}
-function focusFirst() {
-  const items = focusableItems()
-  focusIndex.value = 0
-  items[0]?.focus()
-}
-function focusNext() {
-  const items = focusableItems()
-  if (!items.length) return
-  focusIndex.value = (focusIndex.value + 1) % items.length
-  items[focusIndex.value].focus()
-}
-function focusPrev() {
-  const items = focusableItems()
-  if (!items.length) return
-  focusIndex.value = (focusIndex.value - 1 + items.length) % items.length
-  items[focusIndex.value].focus()
+  accountOpen.value = !accountOpen.value
 }
 
-/** Mobile menu controls */
-function toggleMenuMobile() { menuOpenMobile.value = !menuOpenMobile.value }
-function closeMenuMobile() { menuOpenMobile.value = false }
-function closeMenuMobileAndFocusButton() {
-  menuOpenMobile.value = false
-  menuButtonMobile.value?.focus()
-}
+// Click-Outside & ESC
+let removeListeners = null
+onMounted(() => {
+  const onDocClick = (ev) => {
+    const root = document.getElementById('nav-root')
+    if (root && !root.contains(ev.target)) closeAccountMenu()
+  }
+  const onKey = (e) => { if (e.key === 'Escape') closeAccountMenu() }
 
-/** Logout handler */
-async function handleLogout() {
+  document.addEventListener('click', onDocClick)
+  window.addEventListener('keydown', onKey)
+
+  removeListeners = () => {
+    document.removeEventListener('click', onDocClick)
+    window.removeEventListener('keydown', onKey)
+  }
+})
+onBeforeUnmount(() => { removeListeners?.() })
+
+// Ableitung Anzeigename
+const displayName = computed(() => {
+  const u = user.value || {}
+  const first = u.firstName || u.first_name || ''
+  const last  = u.lastName  || u.last_name  || ''
+  const name  = [first, last].filter(Boolean).join(' ').trim()
+  return name || u.displayName || u.username || u.email || 'Profil'
+})
+
+async function onLogout(){
   try {
-    if (typeof authLogout === 'function') {
-      await authLogout()
-    } else {
-      await $fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
-    }
+    await logout()
   } finally {
-    await fetchUser().catch(() => {})
-    menuOpen.value = false
-    menuOpenMobile.value = false
-    await router.push('/')
+    accountOpen.value = false
+    navigateTo('/')
   }
 }
 </script>
 
+<template>
+  <header class="nav" id="nav-root">
+    <div class="wrap">
+      <!-- Brand -->
+      <NuxtLink to="/" class="brand" aria-label="Startseite">
+        <i class="bi bi-stars"></i>
+        <strong>Evently24</strong>
+      </NuxtLink>
+
+      <!-- Search: Desktop in Reihe, Mobile darunter -->
+      <div class="search-wrap">
+        <SearchBar placeholder="Suche nach Events, Locations, Artists…" />
+      </div>
+
+      <!-- Actions -->
+      <nav class="actions">
+        <button class="btn tiny" @click="openRegion=true" aria-label="Region wechseln">
+          <i class="bi bi-geo"></i>
+          <span class="hide-sm">{{ region }}</span>
+        </button>
+
+        <!-- Profil -->
+        <div class="acc">
+          <button
+            class="icon-btn"
+            @click.stop="onProfileClick"
+            :aria-expanded="accountOpen"
+            aria-haspopup="menu"
+            aria-label="Profil / Konto"
+          >
+            <i class="bi bi-person-circle"></i>
+          </button>
+
+          <!-- Dropdown nur wenn eingeloggt -->
+          <transition name="xpop">
+            <div
+              v-if="isLoggedIn && accountOpen"
+              class="acc-menu"
+              role="menu"
+              aria-label="Kontomenü"
+            >
+              <div class="acc-hd" role="presentation">
+                <div class="avatar"><i class="bi bi-person"></i></div>
+                <div class="who">
+                  <div class="name">{{ displayName }}</div>
+                  <div class="mail" v-if="user?.email">{{ user.email }}</div>
+                </div>
+              </div>
+
+              <NuxtLink class="acc-item" role="menuitem" to="/account" @click="closeAccountMenu">
+                <i class="bi bi-person"></i> Mein Profil
+              </NuxtLink>
+
+              <NuxtLink class="acc-item" role="menuitem" to="/business" @click="closeAccountMenu">
+                <i class="bi bi-briefcase"></i> Business-Account
+              </NuxtLink>
+
+              <button class="acc-item danger" role="menuitem" @click="onLogout">
+                <i class="bi bi-box-arrow-right"></i> Abmelden
+              </button>
+            </div>
+          </transition>
+        </div>
+      </nav>
+    </div>
+  </header>
+</template>
+
 <style scoped>
-.search-desktop{ margin-left: 10px; }
-
-/* grüner Punkt unten rechts am Profil-Icon */
-.status-dot{
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-  background: #28a745; /* Bootstrap success */
-  border: 2px solid currentColor;
+.nav{
+  position:sticky; top:0; z-index:1040; background:#fff; border-bottom:1px solid #eef2f7;
 }
 
-/* Dropdown Styles */
-.menu-dropdown{
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  min-width: 200px;
-  padding: 6px;
-  margin: 0;
-  list-style: none;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,.1);
-  border-radius: .5rem;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
-  z-index: 1000;
-}
-.menu-dropdown-mobile{ min-width: 220px; }
-.menu-item{
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: .6rem .75rem;
-  border-radius: .375rem;
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-}
-.menu-item:hover,
-.menu-item:focus{
-  background: rgba(0,0,0,.05);
-  outline: none;
-}
-.btn-reset{
-  background: none;
-  border: none;
-  text-align: left;
+/* Grid-Layout mit Areas -> mobil Search unter die Leiste */
+.wrap{
+  max-width:1320px; margin:0 auto; padding:.55rem 1rem;
+  display:grid; align-items:center; gap:.6rem .8rem;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "brand search actions";
 }
 
-/* Branding aus deiner neuen Navbar */
-.nav-shell{
-  background-color: rgba(255, 255, 255, 0.7);
-  backdrop-filter:saturate(120%) blur(6px);
-  box-shadow:0 6px 24px rgba(0,0,0,.06);
+.brand{
+  grid-area: brand; display:flex; align-items:center; gap:.45rem;
+  color:#111827; text-decoration:none; white-space:nowrap;
 }
-.nav-logo{ font-weight:800; letter-spacing:.2px; }
+.search-wrap{ grid-area: search; min-width:0; }
+.actions{ grid-area: actions; display:flex; align-items:center; gap:.6rem; }
+
+.btn.tiny{
+  border:1px solid #e6e8f0; background:#fff; border-radius:10px; padding:.35rem .6rem;
+  font-weight:700; color:#111827; display:flex; align-items:center; gap:.4rem;
+}
+.btn.tiny:hover{ background:#f8fafc; border-color:#dfe6ff; }
+
+.icon-btn{
+  width:38px; height:38px; border-radius:50%; border:1px solid #e6e8f0; background:#fff;
+  display:grid; place-items:center; font-size:1.15rem; cursor:pointer; color:#111827; position:relative;
+}
+.icon-btn:hover{ background:#f8fafc; border-color:#dfe6ff; }
+
+/* Account-Dropdown */
+.acc{ position:relative; }
+.acc-menu{
+  position:absolute; right:0; top: calc(100% + .5rem);
+  width: min(280px, 92vw);
+  background:#fff; border:1px solid #eef2f7; border-radius:14px;
+  box-shadow: 0 20px 44px rgba(2,6,23,.14);
+  padding:.5rem; z-index:50;
+}
+.acc-hd{
+  display:flex; gap:.6rem; align-items:center; padding:.4rem .4rem .6rem;
+  border-bottom:1px solid #f1f4fa; margin-bottom:.3rem;
+}
+.avatar{
+  width:38px; height:38px; border-radius:50%; display:grid; place-items:center;
+  background:#f3f4f6; color:#4b5563;
+}
+.who .name{ font-weight:800; line-height:1.2; }
+.who .mail{ font-size:.85rem; color:#6b7280; }
+
+.acc-item{
+  width:100%; text-align:left; display:flex; align-items:center; gap:.6rem;
+  background:#fff; border:0; padding:.55rem .6rem; border-radius:10px; cursor:pointer;
+  color:#111827; text-decoration:none;
+}
+.acc-item:hover{ background:#f8fafc; }
+.acc-item.danger{ color:#b91c1c; }
+.acc-item.danger:hover{ background:#fef2f2; }
+
+.xpop-enter-active, .xpop-leave-active{ transition: opacity .14s ease, transform .14s ease; }
+.xpop-enter-from, .xpop-leave-to{ opacity:0; transform: translateY(-4px); }
+
+@media (max-width: 720px){
+  .wrap{
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand actions"
+      "search search";
+    row-gap:.5rem;
+  }
+  .search-wrap{ width:100%; }
+  .hide-sm{ display:none; }
+}
 </style>
