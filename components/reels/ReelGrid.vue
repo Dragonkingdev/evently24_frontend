@@ -1,5 +1,6 @@
 <!-- components/reels/ReelGrid.vue -->
 <script setup>
+import ReelCard from '~/components/reels/ReelCard.vue'
 const props = defineProps({
   items: { type: Array, default: () => [] } // [{ media, title, subtitle, priceBadge, tags, to, cornerBadge, cornerIcon, locationName }]
 })

@@ -20,6 +20,6 @@ import FiltersDrawer from '~/components/new/FiltersDrawer.vue'
 </template>
 
 <style scoped>
-main{ background:#fff; padding-top: 54px; }
-@media (max-width: 768px){ main{ padding-top: 100px; } }
+main{ background:#fff; padding-top: 0; }
+@media (max-width: 768px){ main{ padding-top: 0; } }
 </style>

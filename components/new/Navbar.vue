@@ -205,6 +205,7 @@ async function onLogout(){
       "brand actions"
       "search search";
     row-gap:.5rem;
+    width: 100%;
   }
   .search-wrap{ width:100%; }
   .hide-sm{ display:none; }

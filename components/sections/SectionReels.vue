@@ -1,11 +1,16 @@
 <!-- components/sections/SectionReels.vue -->
 <script setup>
+import ReelRail from '~/components/reels/ReelRail.vue'
+
 const props = defineProps({
   title: { type: String, default: '' },
   subtitle: { type: String, default: '' },
   cta: { type: Object, default: () => null }, // { label, to }
   items: { type: Array, default: () => [] },
-  light: { type: Boolean, default: false }
+  light: { type: Boolean, default: false },
+  // Optional: pro Sektion anders justieren
+  maxHeight: { type: Number, default: 520 },
+  minHeight: { type: Number, default: 300 }
 })
 </script>
 
@@ -19,7 +24,9 @@ const props = defineProps({
         </div>
         <NuxtLink v-if="cta" :to="cta.to" class="btn ghost">{{ cta.label }}</NuxtLink>
       </div>
-      <ReelGrid :items="items" />
+
+      <!-- Netflix-Style Slider -->
+      <ReelRail :items="items" :maxHeight="maxHeight" :minHeight="minHeight" />
     </div>
   </section>
 </template>

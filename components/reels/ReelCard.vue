@@ -6,9 +6,9 @@ const props = defineProps({
   subtitle: { type: String, default: '' },
   priceBadge: { type: String, default: '' },
   tags: { type: Array, default: () => [] },
-  to: { type: String, default: '#' }, // Link z.B. /event/slug
-  cornerBadge: { type: String, default: '' }, // z.B. Kategorie
-  cornerIcon: { type: String, default: '' }, // z.B. bi-stars
+  to: { type: String, default: '#' },
+  cornerBadge: { type: String, default: '' },
+  cornerIcon: { type: String, default: '' },
   locationName: { type: String, default: '' },
 })
 </script>
@@ -41,8 +41,8 @@ const props = defineProps({
 
 <style scoped>
 .reel{
-  display:block; position:relative; width:100%;
-  aspect-ratio: 9 / 16; border-radius: 18px; overflow:hidden;
+  display:block; position:relative; width:100%; height:100%;
+  border-radius: 18px; overflow:hidden;
   background:#fff; box-shadow: 0 8px 28px rgba(2,6,23,.08);
   transform: translateZ(0);
 }
